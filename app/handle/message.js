@@ -1327,7 +1327,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 								let ext = mp4URL.substring(mp4URL.lastIndexOf('.') + 1);
 								request(mp4URL).pipe(fs.createWriteStream(__dirname + `/src/porn.${ext}`)).on('close', () => {
 									ffmpeg().input(__dirname + `/src/porn.${ext}`).toFormat("gif").pipe(fs.createWriteStream(__dirname + "/src/porn.gif")).on("close", () => {
-										return api.sendMessage(={
+										return api.sendMessage({
 											body: "",
 											attachment: fs.createReadStream(__dirname + `/src/porn.gif`)
 										}, threadID, () => {
