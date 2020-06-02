@@ -1132,7 +1132,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}spacex`) == 0) {
 			return request (`https://api.spacexdata.com/v3/launches/latest`, (err, response, body) => {
 				if (err) throw err;
-				var Data = JSON.parse(body);
+				var data = JSON.parse(body);
 				api.sendMessage(
 					"Thông tin đợt phóng mới nhất của SpaceX:" +
 					"\n-Mission: " + data.mission_name +
