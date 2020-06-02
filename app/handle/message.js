@@ -1139,7 +1139,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					"\n-Năm phóng: " + data.launch_year +
 					"\n-Thời gian phóng: " + data.launch_date_local +
 					"\n-Tên lửa: " + data.rocket.rocket_name +
-					"\n-Link Youtube: " + data.links.video_link +,
+					"\n-Link Youtube: " + data.links.video_link,
 				threadID,messageID
 				);
 			});
