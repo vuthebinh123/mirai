@@ -357,6 +357,13 @@
 		"group":"space"
 	},
 	{
+		"name":"spacex",
+		"decs":"lấy thông tin đợt phóng mới nhất của SpaceX",
+		"usage":"spacex",
+		"example":"spacex",
+		"group":"space"
+	},
+	{
 		"name":"acronym",
 		"decs":"tìm kiếm kết quả từ từ viết tắt của bạn",
 		"usage":"acronym [từ viết tắt]",

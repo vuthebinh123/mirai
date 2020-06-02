@@ -1082,89 +1082,106 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				api.sendMessage(callid, threadID, messageID);
 			});
 
-			//look earth
-			if (contentMessage.indexOf(`${prefix}earth`) == 0)
-				return request(`https://api.nasa.gov/EPIC/api/natural/images?api_key=DEMO_KEY`, (err, response, body) => {
-					if (err) throw err;
-					var jsonData = JSON.parse(body);
-					var randomNumber = Math.floor(Math.random() * ((jsonData.length -1) + 1));
-					var image_name = jsonData[randomNumber].image
-					var date = jsonData[randomNumber].date;
-					var date_split = date.split("-")
-					var year = date_split[0];
-					var month = date_split[1];
-					var day_and_time = date_split[2];
-					var sliced_date = day_and_time.slice(0, 2);
-					var image_link = `https://epic.gsfc.nasa.gov/archive/natural/${year}/${month}/${sliced_date}/png/` + image_name + ".png";
-					let callback = function() {
-						api.sendMessage({
-							body: `${jsonData[randomNumber].caption} on ${date}`,
-							attachment: fs.createReadStream(__dirname + `/src/randompic.png`)
-						}, threadID, () => fs.unlinkSync(__dirname + `/src/randompic.png`), messageID);
-					};
-					request(image_link).pipe(fs.createWriteStream(__dirname + `/src/randompic.png`)).on("close", callback);
-				});
+		//look earth
+		if (contentMessage.indexOf(`${prefix}earth`) == 0)
+			return request(`https://api.nasa.gov/EPIC/api/natural/images?api_key=DEMO_KEY`, (err, response, body) => {
+				if (err) throw err;
+				var jsonData = JSON.parse(body);
+				var randomNumber = Math.floor(Math.random() * ((jsonData.length -1) + 1));
+				var image_name = jsonData[randomNumber].image
+				var date = jsonData[randomNumber].date;
+				var date_split = date.split("-")
+				var year = date_split[0];
+				var month = date_split[1];
+				var day_and_time = date_split[2];
+				var sliced_date = day_and_time.slice(0, 2);
+				var image_link = `https://epic.gsfc.nasa.gov/archive/natural/${year}/${month}/${sliced_date}/png/` + image_name + ".png";
+				let callback = function() {
+					api.sendMessage({
+						body: `${jsonData[randomNumber].caption} on ${date}`,
+						attachment: fs.createReadStream(__dirname + `/src/randompic.png`)
+					}, threadID, () => fs.unlinkSync(__dirname + `/src/randompic.png`), messageID);
+				};
+				request(image_link).pipe(fs.createWriteStream(__dirname + `/src/randompic.png`)).on("close", callback);
+			});
 
-			//localtion iss
-			if (contentMessage.indexOf(`${prefix}iss`) == 0) {
-				request (`http://api.open-notify.org/iss-now.json`, (err, response, body) => {
+		//localtion iss
+		if (contentMessage.indexOf(`${prefix}iss`) == 0) {
+			request (`http://api.open-notify.org/iss-now.json`, (err, response, body) => {
+				if (err) throw err;
+				var jsonData = JSON.parse(body);
+				var position = jsonData["iss_position"];
+				var latitude = position["latitude"];
+				var longitude = position["longitude"];
+				var iss_output = `Vĩ độ: ${latitude} Kinh độ: ${longitude}`
+				api.sendMessage(`Vị trí hiện tại của International Space Station 🌌🌠🌃 \n` + iss_output, threadID, messageID);
+			});
+		}
+
+		//near-earth obj
+		if (contentMessage.indexOf(`${prefix}neo`) == 0) {
+			return request (`https://api.nasa.gov/neo/rest/v1/feed/today?detailed=true&api_key=DEMO_KEY`, (err, response, body) => {
+				if (err) throw err;
+				var jsonData = JSON.parse(body);
+				var total = jsonData.element_count;
+				api.sendMessage(` Hiện tại đang có tổng cộng: ` + total + ` vật thể đang ở gần trái đất ngay lúc này!!`, threadID, messageID);
+			});
+		}
+
+		//spacex
+		if (contentMessage.indexOf(`${prefix}spacex`) == 0) {
+				return request (`https://api.spacexdata.com/v3/launches/latest`, (err, response, body) => {
 					if (err) throw err;
-					var jsonData = JSON.parse(body);
-					var position = jsonData["iss_position"];
-					var latitude = position["latitude"];
-					var longitude = position["longitude"];
-					var iss_output = `Vĩ độ: ${latitude} Kinh độ: ${longitude}`
-					api.sendMessage(`Vị trí hiện tại của International Space Station 🌌🌠🌃 \n` + iss_output, threadID, messageID);
+					var Data = JSON.parse(body);
+					api.sendMessage(
+						"Thông tin đợt phóng mới nhất của SpaceX:" +
+						"\n-Mission: " + data.mission_name +
+						"\n-Năm phóng: " + data.launch_year +
+						"\n-Thời gian phóng: " + data.launch_date_local +
+						"\n-Tên lửa: " + data.rocket.rocket_name +
+						"\n-Link Youtube: " + data.links.video_link +,
+					threadID,messageID
+					);
 				});
 			}
 
-			//near-earth obj
-			if (contentMessage.indexOf(`${prefix}neo`) == 0) {
-				return request (`https://api.nasa.gov/neo/rest/v1/feed/today?detailed=true&api_key=DEMO_KEY`, (err, response, body) => {
-					if (err) throw err;
-					var jsonData = JSON.parse(body);
-					var total = jsonData.element_count;
-					api.sendMessage(` Hiện tại đang có tổng cộng: ` + total + ` vật thể đang ở gần trái đất ngay lúc này!!`, threadID, messageID);
-				});
-			}
-
-			//acronym
-			if (contentMessage.indexOf(`${prefix}acronym`) == 0) {
-				var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
-				if (!content) return api.sendMessage(`bạn chưa thêm từ viết tắt cần tìm kiếm!`, threadID, messageID);
-				var acronym_uri = `http://acronyms.silmaril.ie/cgi-bin/xaa?${content}`;
-				var acronym_meanings = [];
-				return request(acronym_uri, { json: true }, (err, res, body) => {
-					if (err) throw err;
-					var split_body = body.split("\n");
-					var num_acronyms = split_body[4];
-					if (num_acronyms.includes("0")) api.sendMessage("không tìm thấy từ viết tắt này trong từ điển.", threadID, messageID)
-					else {
-						var header = "```ml" + "\n" + "Acronym Meanings for " + content + "👀 \n" + "```"
-						for (var i = 6; i < split_body.length - 1; i += 4) {
-							var line = split_body[i]
-							line = line.trim()
-							var split_acr_array = line.split(" ");
-							var first_item = split_acr_array[0]
-							if (split_acr_array.length === 1) {
-								first_item = first_item.slice(7, first_item.length - 8)
-								split_acr_array[0] = first_item
-							}
-							else {
-								var strpd_item = first_item.slice(7, first_item.length + 5);
-								split_acr_array[0] = strpd_item;
-								var last_item = split_acr_array[split_acr_array.length - 1];
-								var strpd_last_item = last_item.slice(0, split_acr_array.length - 11);
-								split_acr_array[split_acr_array.length - 1] = strpd_last_item;
-							}
-							var final_acronym = split_acr_array.toString()
-							final_acronym = final_acronym.split(",").join(" ")
-							acronym_meanings.push(final_acronym)
+		//acronym
+		if (contentMessage.indexOf(`${prefix}acronym`) == 0) {
+			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
+			if (!content) return api.sendMessage(`bạn chưa thêm từ viết tắt cần tìm kiếm!`, threadID, messageID);
+			var acronym_uri = `http://acronyms.silmaril.ie/cgi-bin/xaa?${content}`;
+			var acronym_meanings = [];
+			return request(acronym_uri, { json: true }, (err, res, body) => {
+				if (err) throw err;
+				var split_body = body.split("\n");
+				var num_acronyms = split_body[4];
+				if (num_acronyms.includes("0")) api.sendMessage("không tìm thấy từ viết tắt này trong từ điển.", threadID, messageID)
+				else {
+					var header = "```ml" + "\n" + "Acronym Meanings for " + content + "👀 \n" + "```"
+					for (var i = 6; i < split_body.length - 1; i += 4) {
+						var line = split_body[i]
+						line = line.trim()
+						var split_acr_array = line.split(" ");
+						var first_item = split_acr_array[0]
+						if (split_acr_array.length === 1) {
+							first_item = first_item.slice(7, first_item.length - 8)
+							split_acr_array[0] = first_item
 						}
-						api.sendMessage(`Nghĩa của từ viết tắt '${content}' là:\n ` + acronym_meanings.join("\n - ") + `.`, threadID, messageID);
-					};
-				});
-			}
+						else {
+							var strpd_item = first_item.slice(7, first_item.length + 5);
+							split_acr_array[0] = strpd_item;
+							var last_item = split_acr_array[split_acr_array.length - 1];
+							var strpd_last_item = last_item.slice(0, split_acr_array.length - 11);
+							split_acr_array[split_acr_array.length - 1] = strpd_last_item;
+						}
+						var final_acronym = split_acr_array.toString()
+						final_acronym = final_acronym.split(",").join(" ")
+						acronym_meanings.push(final_acronym)
+					}
+					api.sendMessage(`Nghĩa của từ viết tắt '${content}' là:\n ` + acronym_meanings.join("\n - ") + `.`, threadID, messageID);
+				};
+			});
+		}
 
 		//count
 		if (contentMessage.indexOf(`${prefix}count`) == 0)
@@ -1206,25 +1223,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				}, messageID);
 			});
 		}
-		
-		//spacex
-		if (contentMessage.indexOf(`${prefix}spacex`) == 0) {
-				request (`https://api.spacexdata.com/v3/launches/latest`, (err, response, body) => {
-					if (err) throw err;
-					var Data = JSON.parse(body);
-			
-					api.sendMessage(
-					"Thông tin đợt phóng mới nhất của SpaceX:" +
-					"\n-Mission: " + data.mission_name +
-					"\n-Năm phóng: " + data.launch_year +
-					"\n-Thời gian phóng: " + data.launch_date_local +
-					"\n-Tên lửa: " + data.rocket.rocket_name +
-					"\n-Link Youtube: " + data.links.video_link +,
-					threadID,
-					messageID
-				);
-				});
-			}
 
 		//hentaivn
 		if (contentMessage.indexOf(`${prefix}hentaivn -i`) == 0) {
