@@ -1,6 +1,6 @@
 {
   "name": "miraibot",
-  "version": "3.8.5",
+  "version": "3.8.6",
   "description": "Source code này có thể biến tài khoản facebook của bạn trở thành một con bot thú vị ;)",
   "main": "index.js",
   "scripts": {
