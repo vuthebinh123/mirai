@@ -29,7 +29,7 @@ module.exports = function ({ models, api }) {
 					if (joinIn == true && threadid != null) {
 						return getName(id).then(name => {
 							api.sendMessage({
-								body: "Chào mừng thằng rác rưởi " + name + " đã vào group",
+								body: "Chào mừng " + name + " đã vào group",
 								mentions: [
 									{
 										tag: name,

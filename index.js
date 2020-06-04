@@ -12,7 +12,7 @@ const __GLOBAL = new Object({
 	threadBlocked: new Array(),
 	userBlocked: new Array(),
 	unsend: new Array(),
-	threadBlockedResend: new Array()
+	resendBlocked: new Array()
 });
 
 app.get("/", (request, response) => response.sendFile(__dirname + "/view/index.html"));
@@ -42,4 +42,4 @@ sequelize.authenticate().then(
 	let models = require("./database/model")({ Sequelize, sequelize });
 	facebook({ Op, models });
 }).catch(e => logger(`${e.stack}`, 2));
-// Full code by Catalizcs and SpermLord
+// Made by CatalizCS and SpermLord
