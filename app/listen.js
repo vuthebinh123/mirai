@@ -5,16 +5,16 @@ module.exports = function({ api, models, __GLOBAL }) {
 	const Thread = require("./controllers/thread")({ models, api });
 	const Rank = require("./controllers/rank")({ models, api });
 	const economy = require("./controllers/economy")({ models, api });
-	(async function init() {
+	(async () => {
 		modules.log("Khởi tạo biến môi trường.");
 		__GLOBAL.userBlocked = (await User.getUsers({ block: true })).map(e => e.uid);
 		__GLOBAL.threadBlocked = (await Thread.getThreads({ block: true })).map(e => e.threadID);
-		__GLOBAL.threadBlockedResend = (await Thread.getThreads({ blockResend: true })).map(e => e.threadID);
+		__GLOBAL.resendBlocked = (await Thread.getThreads({ blockResend: true })).map(e => e.threadID);
 		modules.log("Khởi tạo biến môi trường xong.");
 	})();
 	const handleMessage = require("./handle/message")({ api, modules, config, __GLOBAL, User, Thread, Rank, economy });
 	const handleEvent = require("./handle/event")({ api, modules, config, __GLOBAL, User, Thread });
-	const handleUnsend = require("./handle/unsend")({ api, modules, config, __GLOBAL, User });
+	const handleUnsend = require("./handle/unsend")({ api, __GLOBAL, User });
 	modules.log(config.prefix || "<Không có>", "[ PREFIX ]");
 	modules.log(`${api.getCurrentUserID()} - ${config.botName}`, "[ UID ]");
 	modules.log("Bắt đầu hoạt động!");
