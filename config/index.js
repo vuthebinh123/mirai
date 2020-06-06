@@ -4,7 +4,7 @@ module.exports = {
 	mailFB: process.env.EMAIL || '',
 	passFB: process.env.PASSWORD || '',
 	prefix: process.env.PREFIX || '!',
-	botName: process.env.BOT_NAME || 'Project mirai | Create by Catalizcs and SpermLord!',
+	botName: process.env.BOT_NAME || 'Project Mirai | Made by Catalizcs and SpermLord!',
 	googleSearch: process.env.GOOGLE_SEARCH || '',
 	wolfarm: process.env.WOLFARM || '',
 	yandex: process.env.YANDEX || '',

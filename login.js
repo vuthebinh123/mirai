@@ -14,6 +14,7 @@ const option = {
 	userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36"
 };
 
+//Hãy điền tài khoản và mật khẩu vào file .env sau khi đã đổi .env.example thành .env
 const obj = {
 	email: mailFB,
 	password: passFB

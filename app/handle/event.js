@@ -1,5 +1,5 @@
 const fs = require("fs");
-module.exports = function ({ api, modules, config, __GLOBAL, User, Thread }) {
+module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 	return function ({ event }) {
 		switch (event.logMessageType) {
 			case "log:subscribe":
