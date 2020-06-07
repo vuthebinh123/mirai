@@ -59,7 +59,8 @@ node login.js
 
 ## Video hướng dẫn deploy và sử dụng trên Glitch:
 
-Updating...
+[![Tutorial](https://img.youtube.com/vi/uGmPvlEPGHI/0.jpg)](https://www.youtube.com/watch?v=uGmPvlEPGHI)
+https://youtu.be/uGmPvlEPGHI
 
 ## Deployment
 
