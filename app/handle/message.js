@@ -56,7 +56,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 					//chào buổi sáng
 					while (timer == "07:00" && !oldData.wake.includes(item)) {
-						api.sendMessage(`おはようございま các nii-chan uwu`, item);
+						api.sendMessage(`おはようございます các nii-chan uwu`, item);
 						oldData.wake.push(item);
 						break;
 					}
@@ -714,8 +714,46 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return;
 		}
 
+		//wake time calculator
+		if (contentMessage.indexOf(`${prefix}sleep`) == 0) {
+			const moment = require("moment-timezone");
+			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
+			var wakeTime = [];
+			if (!content) {
+				for (var i = 1; i < 7; i++) wakeTime.push(moment().utcOffset("+07:00").add(90 * i + 15, 'm').format("HH:mm"));
+				return api.sendMessage("Nếu bạn đi ngủ bây giờ, những thời gian hoàn hảo nhất để thức dậy là:\n" + wakeTime.join(', ') + "\nFact: Thời gian để bạn vào giấc ngủ từ lúc nhắm mắt là 15-20 phút", threadID, messageID);
+			}
+			else {
+				if (content.indexOf(":") == -1) return api.sendMessage(`Không đúng format, hãy xem trong ${prefix}help`, threadID, messageID);
+				var contentHour = content.split(":")[0];
+				var contentMinute = content.split(":")[1];
+				if (isNaN(contentHour) || isNaN(contentMinute) || contentHour > 23 || contentMinute > 59 || contentHour < 0 || contentMinute < 0 || contentHour.length != 2 || contentMinute.length != 2)  return api.sendMessage(`Không đúng format, hãy xem trong ${prefix}help`, threadID, messageID);				var getTime = moment().utcOffset("+07:00").format();
+				var time = getTime.slice(getTime.indexOf("T") + 1, getTime.indexOf("+"));
+				var hour = time.split(":")[0];
+				var minute = time.split(":")[1];
+				var sleepTime = getTime.replace(hour + ":", contentHour + ":").replace(minute + ":", contentMinute + ":");
+				for (var i = 1; i < 7; i++) wakeTime.push(moment(sleepTime).utcOffset("+07:00").add(90 * i + 15, 'm').format("HH:mm"));
+				return api.sendMessage("Nếu bạn đi ngủ vào lúc " + content + ", những thời gian hoàn hảo nhất để thức dậy là:\n" + wakeTime.join(', ') + "\nFact: Thời gian để bạn vào giấc ngủ từ lúc nhắm mắt là 15-20 phút", threadID, messageID);
+			}
+		}
 
-		/* ==================== General Commands ================ */
+		//sleep time calculator
+		if (contentMessage.indexOf(`${prefix}wake`) == 0) {
+			const moment = require("moment-timezone");
+			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
+			if (content.indexOf(":") == -1) return api.sendMessage(`Không đúng format, hãy xem trong ${prefix}help`, threadID, messageID);
+			var sleepTime = [];
+			var contentHour = content.split(":")[0];
+			var contentMinute = content.split(":")[1];
+			if (isNaN(contentHour) || isNaN(contentMinute) || contentHour > 23 || contentMinute > 59 || contentHour < 0 || contentMinute < 0 || contentHour.length != 2 || contentMinute.length != 2)  return api.sendMessage(`Không đúng format, hãy xem trong ${prefix}help`, threadID, messageID);
+			var getTime = moment().utcOffset("+07:00").format();
+			var time = getTime.slice(getTime.indexOf("T") + 1, getTime.indexOf("+"));
+			var hour = time.split(":")[0];
+			var minute = time.split(":")[1];
+			var wakeTime = getTime.replace(hour + ":", contentHour + ":").replace(minute + ":", contentMinute + ":");
+			for (var i = 6; i > 0; i--) sleepTime.push(moment(wakeTime).utcOffset("+07:00").subtract(90 * i + 15, 'm').format("HH:mm"));
+			return api.sendMessage("Nếu bạn muốn thức dậy vào lúc " + content + ", những thời gian hoàn hảo nhất để đi ngủ là:\n" + sleepTime.join(', ') + "\nFact: Thời gian để bạn vào giấc ngủ từ lúc nhắm mắt là 15-20 phút", threadID, messageID);
+		}
 
 		//gọi bot
 		if (contentMessage == `${prefix}sumi` || contentMessage.indexOf('sumi') == 0) return api.sendMessage(`Dạ gọi Sumi ạ?`, threadID, messageID);
@@ -775,9 +813,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var options = content.substring(content.indexOf(" -> ") + 4)
 			var option = options.split(" | ");
 			var object = {}
-			for (var i = 0; i < option.length; i++) {
-				object[option[i]] = false;
-			}
+			for (var i = 0; i < option.length; i++) object[option[i]] = false;
 			api.createPoll(title, threadID, object, (err) => {
 				if(err) return api.sendMessage("Có lỗi xảy ra vui lòng thử lại", threadID, messageID);
 			});
@@ -788,9 +824,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			if (isNaN(value)) return api.sendMessage('Dữ liệu không phải là một con số', threadID, messageID);
 			if (value > 50) return api.sendMessage('Dữ liệu phải nhỏ hơn 50!', threadID, messageID);
 			var color = ['196241301102133','169463077092846','2442142322678320', '234137870477637', '980963458735625','175615189761153','2136751179887052', '2058653964378557','2129984390566328','174636906462322','1928399724138152','417639218648241','930060997172551','164535220883264','370940413392601','205488546921017','809305022860427'];
-			for (var i = 0; i < value; i++) {
-				api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID, (err) => sleep(1000));
-			};
+			for (var i = 0; i < value; i++) api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID, (err) => sleep(1000));
 			return;
 		}
 
@@ -1027,9 +1061,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
 			if (!content) return api.sendMessage(`${senderID}`, threadID, messageID);
 			else if (content.indexOf("@") !== -1) {
-				for (var i = 0; i < Object.keys(event.mentions).length; i++) {
-					api.sendMessage(`${Object.keys(event.mentions)[i]}`, threadID, messageID);
-				}
+				for (var i = 0; i < Object.keys(event.mentions).length; i++) api.sendMessage(`${Object.keys(event.mentions)[i]}`, threadID, messageID);
 				return;
 			}
 		}
@@ -1517,9 +1549,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				if (money < 50) return api.sendMessage(`Số tiền đặt cược của bạn quá nhỏ, tối thiểu là 50 đô!`, threadID, messageID);
 
 				let number = [];
-				for (i = 0; i < 3; i++) {
-					number[i] = Math.floor(Math.random() * slotItems.length);
-				}
+				for (i = 0; i < 3; i++) number[i] = Math.floor(Math.random() * slotItems.length);
 				if (number[0] == number[1] && number[1] == number[2]) {
 					money *= 9;
 					win = true;

@@ -3,16 +3,6 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 	return function ({ event }) {
 		switch (event.logMessageType) {
 			case "log:subscribe":
-				if (!fs.existsSync(__dirname + "/src/groupID.json")) {
-					var data = [];
-					api.getThreadList(100, null, ["INBOX"], function(err, list) {
-						if (err) throw err;
-						list.forEach(item => {
-							if (item.isGroup == true) data.push(item.threadID);
-						});
-						fs.writeFileSyns(__dirname + "/src/groupID.json", JSON.stringify(data));
-					});
-				}
 				var groupIDFile = fs.readFileSync(__dirname + "/src/groupID.json");
 				var groupIDData = JSON.parse(groupIDFile);
 				if (!groupIDData.some(item => item == event.threadID)) {

@@ -1,6 +1,6 @@
 module.exports = function ({ sequelize, Sequelize }) {
 	let Thread = sequelize.define('thread', {
-		id: {
+		num: {
 			type: Sequelize.INTEGER,
 			primaryKey: true,
 			autoIncrement: true

@@ -17,10 +17,8 @@ const __GLOBAL = new Object({
 
 app.get("/", (request, response) => response.sendFile(__dirname + "/view/index.html"));
 app.get("/dbv", (request, response) => response.sendFile(__dirname + "/config/dbviewer/index.html"));
-app.get("/dbviewer", (request, response) => response.sendFile(__dirname + "/config/dbviewer/index.html"));
 app.use(express.static(__dirname + '/config'));
 app.use(express.static(__dirname + '/config/dbviewer'));
-
 const listener = app.listen(process.env.PORT, () => console.log("Đã mở tại port: " + listener.address().port));
 
 setTimeout(() => {

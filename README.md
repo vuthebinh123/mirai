@@ -26,7 +26,7 @@
 
 # Overview
 
-Project sẽ biến tài khoản Facebook cá nhân của bạn thành một con bot thông minh, nhanh nhẹn!
+Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành một con bot thông minh, nhanh nhẹn!
 
 # Installation 
 
@@ -46,7 +46,7 @@ git clone https://github.com/roxtigger2003/mirai
 ```
 + Step 2: Trỏ và bắt đầu cài đặt các gói module cần thiết cho bot cũng như file env:
 ```
-cd mirai && npm install && mv .env.example .env
+cd mirai && npm install && mv -f .env.example .env
 ```
 sau khi xong các dòng lệnh trên bạn hãy mở file env và edit nó
 

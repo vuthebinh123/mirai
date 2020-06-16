@@ -390,5 +390,19 @@
 		"usage":"resend [on hoặc off]",
 		"example":"resend off",
 		"group":"system"
+	},
+	{
+		"name":"sleep",
+		"decs":"Tính thời gian thức dậy hoàn hào cho bạn",
+		"usage":"sleep [thời gian/để trống]",
+		"example":"sleep 22:00",
+		"group":"general"
+	},
+	{
+		"name":"wake",
+		"decs":"Tính thời gian đi ngủ hoàn hào cho bạn",
+		"usage":"wake [thời gian]",
+		"example":"wake 06:00",
+		"group":"general"
 	}
 ]

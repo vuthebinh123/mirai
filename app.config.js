@@ -1,7 +1,7 @@
 module.exports = {
 	apps: [
 		{
-			name: 'Mirai Bot', 
+			name: 'Project Mirai', 
 			script: './index.js',
 			autorestart: true,
 			exec_mode: 'cluster',
