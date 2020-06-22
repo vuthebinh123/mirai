@@ -23,7 +23,7 @@ const listener = app.listen(process.env.PORT, () => console.log("Đã mở tại
 
 setTimeout(() => {
 	console.log("refreshing!");
-	cmd.run("pm2 restart 'Project Mirai'");
+	cmd.run("pm2 restart 0");
 }, process.env.TIME_RERESH || '600000');
 
 var facebook = ({ Op, models }) => {
