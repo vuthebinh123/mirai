@@ -1,6 +1,6 @@
 {
-  "name": "Project Mirai",
-  "version": "3.10.0",
+  "name": "Mirai",
+  "version": "3.10.1",
   "description": "Source code này có thể biến tài khoản facebook của bạn trở thành một con bot thú vị ;)",
   "main": "index.js",
   "scripts": {
