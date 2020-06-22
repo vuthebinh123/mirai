@@ -193,7 +193,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return;
 		}
 
-		Rank.updatePoint(senderID, 2);
+		Rank.updatePoint(senderID, 1);
 
 		// Unban user
 		if (contentMessage.indexOf(`${prefix}unban`) == 0 && admins.includes(senderID)) {
@@ -485,14 +485,10 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			else if (!content || !data.nsfw.hasOwnProperty(content) || !data.sfw.hasOwnProperty(content)) {
 				let sfwList = [];
 				let nsfwList = [];
-				Object.keys(data.sfw).forEach(endpoint => {
-					sfwList.push(endpoint);
-				});
-				Object.keys(data.nsfw).forEach(endpoint => {
-					nsfwList.push(endpoint);
-				});
-				var sfwTags = sfwList.join(', ');
-				var nsfwTags = nsfwList.join(', ');
+				Object.keys(data.sfw).forEach(endpoint => sfwList.push(endpoint));
+				Object.keys(data.nsfw).forEach(endpoint => nsfwList.push(endpoint));
+				let sfwTags = sfwList.join(', ');
+				let nsfwTags = nsfwList.join(', ');
 				return api.sendMessage(`=== Tất cả các tag SFW ===\n` + sfwTags + `\n\n=== Tất cả các tag NSFW ===\n` + nsfwTags, threadID, messageID);
 			}
 
@@ -853,18 +849,22 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//thời tiết
 		if (contentMessage.indexOf(`${prefix}weather`) == 0) {
 			var city = contentMessage.slice(prefix.length + 8, contentMessage.length);
-			if (city.length == 0) return api.sendMessage(`Bạn chưa nhập địa điểm, hãy đọc hướng dẫn tại ${prefix}help weather !`,threadID, messageID);
+			if (city.length == 0) return api.sendMessage(`Bạn chưa nhập địa điểm, hãy đọc hướng dẫn tại ${prefix}help weather!`,threadID, messageID);
 			request(encodeURI("https://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + openweather + "&units=metric&lang=vi"), (err, response, body) => {
 				if (err) throw err;
 				var weatherData = JSON.parse(body);
 				if (weatherData.cod !== 200) return api.sendMessage(`Thành phố ${city} không tồn tại!`, threadID, messageID);
-				api.sendMessage(
-					'🌡 Nhiệt độ: ' + weatherData.main.temp + '°C' + '\n' +
-					'☁️ Mây: ' + weatherData.weather[0].description + '\n' +
-					'💦 Độ ẩm: ' + weatherData.main.humidity + '%' + '\n' +
-					'💨 Tốc độ gió: ' + weatherData.wind.speed + 'km/h',
-					threadID, messageID
-				);
+				api.sendMessage({
+					body: '🌡 Nhiệt độ: ' + weatherData.main.temp + '°C' + '\n' +
+								'☁️ Mây: ' + weatherData.weather[0].description + '\n' +
+								'💦 Độ ẩm: ' + weatherData.main.humidity + '%' + '\n' +
+								'💨 Tốc độ gió: ' + weatherData.wind.speed + 'km/h',
+					location: {
+						latitude: weatherData.coord.lat,
+						longitude: weatherData.coord.lon,
+						current: true
+					},
+				}, threadID, messageID);
 			});
 			return;
 		}
@@ -1323,9 +1323,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			};
 			if (!content || !album.hasOwnProperty(content)) {
 				let allTags = [];
-				Object.keys(album).forEach((item) => {
-					allTags.push(item);
-				});
+				Object.keys(album).forEach((item) => allTags.push(item));
 				var pornTags = allTags.join(', ');
 				return api.sendMessage("Tất cả tag là:\n" + pornTags, threadID, messageID);
 			}
