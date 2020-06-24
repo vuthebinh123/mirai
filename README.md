@@ -34,13 +34,13 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 ## Yêu cầu để có thể sử dụng bot:
 
-  - [NodeJS](https://nodejs.org/en/) và [git (không bắt buộc)](https://git-scm.com/downloads)
+  - [NodeJS](https://nodejs.org/en/) [git (không bắt buộc)](https://git-scm.com/downloads)
  
   - Trình độ sử dụng NodeJS ở mức trung bình
  
   - Một tài khoản Facebook dùng để làm bot
  
-## Sau đây là hướng dẫn cài đặt (Dành cho Windows/Linux/MacOS):  
+## Sau đây là hướng dẫn cài đặt (Hiện tại chưa hỗ trợ cho các dòng windows):  
 
 + Step 1: Clone hoặc download project, nếu máy bạn có git hãy sử dụng lệnh:
 ```
@@ -67,7 +67,7 @@ node login.js
 
 Click this button:
 
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/import/github/roxtigger2003/mirai)    [![Deploy on Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/roxtigger2003/mirai/tree/master)
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/import/github/roxtigger2003/mirai)
 
 # Author
 

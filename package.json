@@ -1,6 +1,6 @@
 {
   "name": "Mirai",
-  "version": "3.10.1",
+  "version": "3.10.2",
   "description": "Source code này có thể biến tài khoản facebook của bạn trở thành một con bot thú vị ;)",
   "main": "index.js",
   "scripts": {
@@ -17,7 +17,7 @@
     "messenger"
   ],
   "author": "roxtigger2003 & SpermLord",
-  "license": "GNU",
+  "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/roxtigger2003/mirai/issues"
   },
