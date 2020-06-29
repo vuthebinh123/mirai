@@ -289,8 +289,8 @@
 	{
 		"name":"money",
 		"decs":"xem số tiền bạn đang có",
-		"usage":"kẹt ngân",
-		"example":"kẹt ngân",
+		"usage":"money",
+		"example":"money",
 		"group":"economy"
 	},
 	{
