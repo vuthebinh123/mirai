@@ -1040,10 +1040,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			const balance = require('chem-eb');
 			if (event.type == "message_reply") {
 				var eventContent = event.messageReply.body;
-				return api.sendMessage(`✅ ${balance(eventContent)}`, threadID, messageID);
+				var balanced = balance(eventContent);
+				return api.sendMessage(`✅ ${balanced.outChem}`, threadID, messageID);
 			} else {
 				var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
-				return api.sendMessage(`✅ ${balance(eventContent)}`, threadID, messageID);
+				var balanced = balance(content);
+				return api.sendMessage(`✅ ${balanced.outChem}`, threadID, messageID);
 			}
 		}
 
