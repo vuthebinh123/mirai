@@ -107,15 +107,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			msgBody: contentMessage
 		});
 
-		function sleep(milliseconds) {
-			const date = Date.now();
-			let currentDate = null;
-			do {
-				currentDate = Date.now();
-			} while (currentDate - date < milliseconds);
-		}
-
-		/* ================ Staff Commands ==================== */
+	/* ================ Staff Commands ==================== */
 
 		//lấy file cmds
 		var nocmdFile = fs.readFileSync(__dirname + "/src/cmds.json");
@@ -326,7 +318,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//restart
 		if (contentMessage == `${prefix}restart` && admins.includes(senderID)) return api.sendMessage(`Hệ thống restart khẩn ngay bây giờ!!`, threadID, () =>  require("node-cmd").run("pm2 restart 0") , messageID);
 
-		/* ==================== Help Commands ================*/
+	/* ==================== Help Commands ================*/
 
 		//add thêm lệnh cho help
 		if (contentMessage.indexOf(`${prefix}sethelp`) == 0 && admins.includes(senderID)) {
@@ -472,243 +464,36 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			}
 		}
 
-		/* ==================== General Commands ================*/
+	/* ==================== Encode and Decode Commands ================*/
 
-		if (contentMessage.indexOf(`${prefix}anime`) == 0) {
-			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
-			var jsonData = fs.readFileSync(__dirname + "/src/anime.json");
-			var data = JSON.parse(jsonData);
-
-			var url;
-			if (data.sfw.hasOwnProperty(content)) url = data.sfw[content];
-			else if (data.nsfw.hasOwnProperty(content)) url = data.nsfw[content];
-			else if (!content || !data.nsfw.hasOwnProperty(content) || !data.sfw.hasOwnProperty(content)) {
-				let sfwList = [];
-				let nsfwList = [];
-				Object.keys(data.sfw).forEach(endpoint => sfwList.push(endpoint));
-				Object.keys(data.nsfw).forEach(endpoint => nsfwList.push(endpoint));
-				let sfwTags = sfwList.join(', ');
-				let nsfwTags = nsfwList.join(', ');
-				return api.sendMessage(`=== Tất cả các tag SFW ===\n` + sfwTags + `\n\n=== Tất cả các tag NSFW ===\n` + nsfwTags, threadID, messageID);
+		//morse
+		if (contentMessage.indexOf(`${prefix}morse`) == 0) {
+			const morsify = require('morsify');
+			const content = contentMessage.slice(prefix.length + 6, contentMessage.length);
+			if (event.type == "message_reply") {
+				if (content.indexOf('encode') !== -1) {
+					var eventContent = event.messageReply.body;
+					const encoded = morsify.encode(eventContent);
+					return api.sendMessage(encoded, threadID, messageID);
+				} else if (content.indexOf('decode') !== -1) {
+					var eventContent = event.messageReply.body;
+					var decoded = morsify.decode(eventContent);
+					return api.sendMessage(decoded, threadID, messageID);
+				} else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
+			} else {
+				if (content.indexOf('encode') == 0) {
+					var sContent = content.slice(7, contentMessage.length);
+					const encoded = morsify.encode(sContent);
+					return api.sendMessage(encoded, threadID, messageID);
+				} else if (content.indexOf('decode') == 0) {
+					var sContent = content.slice(8, contentMessage.length);
+					var decoded = morsify.decode(sContent);
+					return api.sendMessage(decoded, threadID, messageID);
+				} else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
 			}
-
-			return request(url, (error, response, body) => {
-				let picData = JSON.parse(body);
-				let getURL = picData.url;
-				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
-				let callback = function() {
-					api.sendMessage({
-						body: "",
-						attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)
-					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
-				};
-				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
-			});
 		}
 
-		//meme
-		if (contentMessage == `${prefix}meme`)
-			return request("https://meme-api.herokuapp.com/gimme/memes", (err, response, body) => {
-				if (err) throw err;
-				var content = JSON.parse(body);
-				let title = content.title;
-				var baseurl = content.url;
-				let callback = function() {
-					api.sendMessage({
-						body: `${title}`,
-						attachment: fs.createReadStream(__dirname + "/src/meme.jpg")
-					}, threadID, () => fs.unlinkSync(__dirname + "/src/meme.jpg"), messageID);
-				};
-				request(baseurl).pipe(fs.createWriteStream(__dirname + `/src/meme.jpg`)).on("close", callback);
-			});
-
-		if (contentMessage.indexOf(`${prefix}gif`) == 0) {
-			var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
-			if (content.length == -1) return api.sendMessage(`Bạn đã nhập sai format, vui lòng ${prefix}help gif để biết thêm chi tiết!`, threadID, messageID);
-			if (content.indexOf(`cat`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=cat&limit=1`, (err, response, body) => {
-					if (err) throw err;
-					var string = JSON.parse(body);
-					var stringURL = string.results[0].media[0].tinygif.url;
-					console.log(stringURL);
-					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + `/src/randompic.gif`)
-						}, threadID, () => fs.unlinkSync(__dirname + `/src/randompic.gif`));
-					};
-					request(stringURL).pipe(fs.createWriteStream(__dirname + `/src/randompic.gif`)).on("close", callback);
-				});
-				return;
-			}
-
-			else if (content.indexOf(`dog`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=dog&limit=1`, (err, response, body) => {
-					if (err) throw err;
-					var string = JSON.parse(body);
-					var stringURL = string.results[0].media[0].tinygif.url;
-					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
-					};
-					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
-				});
-				return;
-			}
-
-			else if (content.indexOf(`capoo`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=capoo&limit=1`, (err, response, body) => {
-					if (err) throw err;
-					var string = JSON.parse(body);
-					var stringURL = string.results[0].media[0].tinygif.url;
-					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
-					};
-					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
-				});
-				return;
-			}
-
-			else if (content.indexOf(`mixi`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=mixigaming&limit=1`, (err, response, body) => {
-					if (err) throw err;
-					var string = JSON.parse(body);
-					var stringURL = string.results[0].media[0].tinygif.url;
-					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
-					};
-					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
-				});
-				return;
-			}
-
-			else if (content.indexOf(`bomman`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=bommanrage&limit=1`, (err, response, body) => {
-					if (err) throw err;
-					var string = JSON.parse(body);
-					var stringURL = string.results[0].media[0].tinygif.url;
-					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
-					};
-					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
-				});
-				return;
-			}
-			else return api.sendMessage(`Tag của bạn nhập không tồn tại, vui lòng đọc hướng dẫn sử dụng trong ${prefix}help gif`, threadID, messageID);
-		}
-
-		if (contentMessage.indexOf(`${prefix}hug`) == 0 && contentMessage.indexOf('@') !== -1)
-			return request('https://nekos.life/api/v2/img/hug', (err, response, body) =>{
-				let picData = JSON.parse(body);
-				let getURL = picData.url;
-				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
-				let tag = contentMessage.slice(prefix.length + 5, contentMessage.length).replace("@", "");
-				let callback = function() {
-					api.sendMessage({
-						body: tag + ", I wanna hug you ❤️",
-						mentions: [
-							{
-								tag: tag,
-								id: Object.keys(event.mentions)[0]
-							}
-						],
-						attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)
-					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
-				};
-				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
-			});
-
-		if (contentMessage.indexOf(`${prefix}kiss`) == 0 && contentMessage.indexOf('@') !== -1)
-			return request('https://nekos.life/api/v2/img/kiss', (err, response, body) =>{
-				let picData = JSON.parse(body);
-				let getURL = picData.url;
-				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
-				let tag = contentMessage.slice(prefix.length + 6, contentMessage.length).replace("@", "");
-				let callback = function() {
-					api.sendMessage({
-						body: tag + ", I wanna kiss you ❤️",
-						mentions: [
-							{
-								tag: tag,
-								id: Object.keys(event.mentions)[0]
-							}
-						],
-						attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)
-					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
-				};
-				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
-			});
-
-		if (contentMessage.indexOf(`${prefix}slap`) == 0 && contentMessage.indexOf('@') !== -1)
-			return request('https://nekos.life/api/v2/img/slap', (err, response, body) =>{
-				let picData = JSON.parse(body);
-				let getURL = picData.url;
-				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
-				let tag = contentMessage.slice(prefix.length + 5, contentMessage.length).replace("@", "");
-				let callback = function() {
-					api.sendMessage({
-						body: tag + ", take this slap 😈",
-						mentions: [
-							{
-								tag: tag,
-								id: Object.keys(event.mentions)[0]
-							}
-						],
-						attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)
-					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
-				};
-				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
-			});
-
-		//saucenao
-		if (contentMessage.indexOf(`${prefix}saucenao`) == 0) {
-			if (event.type != "message_reply") return api.sendMessage(`Vui lòng bạn reply bức ảnh cần phải tìm!`, threadID, messageID);
-			var BaseJson = event.messageReply.attachments;
-			if (event.messageReply.attachments.length > 1) return api.sendMessage(`Vui lòng reply chỉ một ảnh!`, threadID, messageID);
-			if (event.messageReply.attachments[0].type == 'photo') {
-				if (saucenao == '' || typeof saucenao == undefined) return api.sendMessage(`Chưa có api của saucenao!`, threadID, messageID);
-				var imgURL = event.messageReply.attachments[0].url;
-				const sagiri = require('sagiri'),
-				search = new sagiri(saucenao, {
-					numRes: 1
-				});
-				search.getSauce(imgURL).then(response => {
-					let data = response[0];
-					let results = {
-						thumbnail: data.original.header.thumbnail,
-						similarity: data.similarity,
-						material: data.original.data.material || 'none',
-						characters: data.original.data.characters || 'none',
-						creator: data.original.data.creator || 'none',
-						site: data.site,
-						url: data.url
-					};
-					const minSimilarity = 30;
-					if (minSimilarity <= ~~results.similarity) {
-						api.sendMessage(
-						'Đây là kết quả tìm kiếm được\n' +
-						'-------------------------\n' +
-						'- Độ tương tự: ' + results.similarity + '%\n' +
-						'- Material: ' + results.material + '\n' +
-						'- Characters: ' + results.characters + '\n' +
-						'- Creator: ' + results.creator + '\n' +
-						'- Original site: ' + results.site + ' - ' + results.url, threadID, messageID);
-					} else api.sendMessage(`Không thấy kết quả nào trùng với ảnh bạn đang tìm kiếm :'(`, threadID, messageID);
-				});
-			}
-			return;
-		}
+	/* ==================== General Commands ================*/
 
 		//wake time calculator
 		if (contentMessage.indexOf(`${prefix}sleep`) == 0) {
@@ -752,7 +537,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//gọi bot
-		if (contentMessage == `${prefix}sumi` || contentMessage.indexOf('sumi') == 0) return api.sendMessage(`Dạ gọi Sumi ạ?`, threadID, messageID);
+		if (contentMessage == `${prefix}mirai` || contentMessage.indexOf('mirai') == 0) return api.sendMessage(`Dạ gọi em đây ạ?`, threadID, messageID);
 
 		//lenny
 		if (contentMessage == `${prefix}lenny` || contentMessage.indexOf('lenny') == 0) return api.sendMessage("( ͡° ͜ʖ ͡°)", threadID, messageID);
@@ -772,12 +557,29 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//simsimi
 		if (contentMessage.indexOf(`${prefix}sim`) == 0) {
 			const fetch = require('node-fetch');
-			var content = contentMessage.slice(1, contentMessage.length);
+			var content = contentMessage.slice(pretix.length + 49
+			, contentMessage.length);
 			const params = new URLSearchParams();
 			params.set('lang', 'vi');
 			params.set('hoi', content);
+			params.set('token', 
+				Buffer.from(
+					Buffer.from("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36" + "KhongAPI")
+						.toString("base64")
+						.split("")
+						.map(x => x.charCodeAt(0).toString(16).split(""))
+						.flat(Infinity)
+						.reverse()
+						.join("")
+				).toString("base64")
+					.split("")
+					.map(x => x.charCodeAt(0).toString(16).split(""))
+					.flat(Infinity)
+					.reverse()
+					.join("")
+			);
 			if (!content) return api.sendMessage("Nhập tin nhắn!", threadID, messageID);
-			fetch("https://sim.vnoi.xyz/post_simsimi.php", {
+			fetch("https://sim.vnoi.xyz/simsimi.php", {
 				method: "post",
 				body: params.toString(),
 				headers: {
@@ -785,6 +587,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					"Content-Length": params.toString().length,
 					Origin: "https://sim.vnoi.xyz",
 					Referer: "https://sim.vnoi.xyz/?lang=vi",
+					"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36"
 				}
 			}).then(async (res) => {
 				if (res.status != 200) return api.sendMessage("Đã có lỗi xảy ra!", threadID, messageID)
@@ -795,6 +598,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return;
 		}
 
+		//random màu cho theme chat
 		if (contentMessage == `${prefix}randomcolor`) {
 			var color = ['196241301102133','169463077092846','2442142322678320', '234137870477637', '980963458735625','175615189761153','2136751179887052', '2058653964378557','2129984390566328','174636906462322','1928399724138152','417639218648241','930060997172551','164535220883264','370940413392601','205488546921017','809305022860427'];
 			return api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID, (err) => {
@@ -815,12 +619,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			});
 		}
 
+		//biến nhóm chat thành vũ trường
 		if (contentMessage.indexOf(`${prefix}rainbow`) == 0) {
 			var value = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			if (isNaN(value)) return api.sendMessage('Dữ liệu không phải là một con số', threadID, messageID);
 			if (value > 50) return api.sendMessage('Dữ liệu phải nhỏ hơn 50!', threadID, messageID);
 			var color = ['196241301102133','169463077092846','2442142322678320', '234137870477637', '980963458735625','175615189761153','2136751179887052', '2058653964378557','2129984390566328','174636906462322','1928399724138152','417639218648241','930060997172551','164535220883264','370940413392601','205488546921017','809305022860427'];
-			for (var i = 0; i < value; i++) api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID, (err) => sleep(1000));
+			for (var i = 0; i < value; i++) api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID);
 			return;
 		}
 
@@ -853,12 +658,19 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			request(encodeURI("https://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + openweather + "&units=metric&lang=vi"), (err, response, body) => {
 				if (err) throw err;
 				var weatherData = JSON.parse(body);
-				if (weatherData.cod !== 200) return api.sendMessage(`Thành phố ${city} không tồn tại!`, threadID, messageID);
+				var sunrise = weatherData.sys.sunrise;
+				var sunset = weatherData.sys.sunset;
+				var sunrise_date = moment.unix(sunrise).tz("Asia/Ho_Chi_Minh");
+				var sunset_date = moment.unix(sunset).tz("Asia/Ho_Chi_Minh");
+				if (weatherData.cod !== 200) return api.sendMessage(`Địa điểm ${city} không tồn tại!`, threadID, messageID);
 				api.sendMessage({
 					body: '🌡 Nhiệt độ: ' + weatherData.main.temp + '°C' + '\n' +
-								'☁️ Mây: ' + weatherData.weather[0].description + '\n' +
+								'🌡 Nhiệt độ cơ thể cảm nhận được: ' + weatherData.main.feels_like + '°C' + '\n' +
+								'☁️ bầu trời hiện tại: ' + weatherData.weather[0].description + '\n' +
 								'💦 Độ ẩm: ' + weatherData.main.humidity + '%' + '\n' +
-								'💨 Tốc độ gió: ' + weatherData.wind.speed + 'km/h',
+								'💨 Tốc độ gió: ' + weatherData.wind.speed + 'km/h' + '\n' +
+								'🌅 Mặt trời mọc vào lúc: ' + sunrise_date.format('HH:mm:ss') + '\n' +
+								'🌄 Mặt trời lặn vào lúc: ' + sunset_date.format('HH:mm:ss') + '\n',
 					location: {
 						latitude: weatherData.coord.lat,
 						longitude: weatherData.coord.lon,
@@ -936,7 +748,16 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//ramdom con số
-		if (contentMessage == `${prefix}roll`) return api.sendMessage("UwU Your Number is " + Math.round(Math.random() * 100), threadID, messageID);
+		if (contentMessage.indexOf(`${prefix}roll`) == 0) {
+			var content = contentMessage.slice(prefix.length + 5, contentMessage.length); //xx yy
+			var splitContent = content.split(" "); //{"xx","yy"}
+			var min = splitContent[0];
+			var max = splitContent[1];
+			if (isNaN(min) || isNaN(max)) return api.sendMessage('Dữ liệu bạn nhập không phải là một con số "/', threadID, messageID);
+			if (min >= max) return api.sendMessage('Oops, số kết thúc của bạn lớn hơn hoặc bằng số bắt đầu "/', threadID, messageID);
+			var randomNumber = Math.floor(Math.random() * (max - min + 1) + min);
+			return api.sendMessage(`uwu con số đẹp nhất em chọn được là: ${randomNumber}`, threadID, messageID);
+		}
 
 		//Khiến bot nhái lại tin nhắn bạn
 		if (contentMessage.indexOf(`${prefix}echo`) == 0) return api.sendMessage(contentMessage.slice(prefix.length + 5, contentMessage.length), threadID);
@@ -1013,23 +834,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var stringData = JSON.parse(fs.readFileSync(__dirname + "/src/quotes.json"));
 			var randomQuotes = stringData[Math.floor(Math.random() * stringData.length)];
 			return api.sendMessage('Quote: \n "' + randomQuotes.text + '"\n     -' + randomQuotes.author + "-", threadID, messageID);
-		}
-
-		//khiến bot làm toán ?!
-		if (contentMessage.indexOf(`${prefix}math`) == 0) {
-			const wolfram = "http://api.wolframalpha.com/v2/result?appid=" + wolfarm + "&i=";
-			var m = contentMessage.slice(prefix.length + 5, contentMessage.length);
-			var o = m.replace(/ /g, "+");
-			var l = "http://lmgtfy.com/?q=" + o;
-			request(wolfram + encodeURIComponent(m), function(err, response, body) {
-				if (body.toString() === "Wolfram|Alpha did not understand your input") return api.sendMessage(l, threadID, messageID);
-				else if (body.toString() === "Wolfram|Alpha did not understand your input") return api.sendMessage("Tôi không hiểu câu hỏi của bạn", threadID, messageID);
-				else if (body.toString() === "My name is Wolfram Alpha.") return api.sendMessage("Tên tôi là Mirai", threadID, messageID);
-				else if (body.toString() === "I was created by Stephen Wolfram and his team.") return api.sendMessage("Tôi được làm ra bởi CatalizCS và SpermLord", threadID, messageID);
-				else if (body.toString() === "I am not programmed to respond to this dialect of English.") return api.sendMessage("Tôi không được lập trình để nói những thứ như này", threadID, messageID);
-				else if (body.toString() === "StringJoin(CalculateParse`Content`Calculate`InternetData(Automatic, Name))") return api.sendMessage("Tôi không biết phải trả lời như nào", threadID, messageID);
-				else return api.sendMessage(body, threadID, messageID);
-			});
 		}
 
 		//uptime
@@ -1212,7 +1016,38 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//count
 		if (contentMessage.indexOf(`${prefix}count`) == 0) return api.getThreadInfo(threadID, (err, info) => api.sendMessage("Tổng tin nhắn trong group này là: " + info.messageCount, threadID, messageID));
 
-		/* ==================== NSFW Commands ==================== */
+		/* ==================== Học Tập Commands ==================== */
+
+		//toán học
+		if (contentMessage.indexOf(`${prefix}math`) == 0) {
+			const wolfram = "http://api.wolframalpha.com/v2/result?appid=" + wolfarm + "&i=";
+			var m = contentMessage.slice(prefix.length + 5, contentMessage.length);
+			var o = m.replace(/ /g, "+");
+			var l = "http://lmgtfy.com/?q=" + o;
+			request(wolfram + encodeURIComponent(m), function(err, response, body) {
+				if (body.toString() === "Wolfram|Alpha did not understand your input") return api.sendMessage(l, threadID, messageID);
+				else if (body.toString() === "Wolfram|Alpha did not understand your input") return api.sendMessage("Tôi không hiểu câu hỏi của bạn", threadID, messageID);
+				else if (body.toString() === "My name is Wolfram Alpha.") return api.sendMessage("Tên tôi là Mirai", threadID, messageID);
+				else if (body.toString() === "I was created by Stephen Wolfram and his team.") return api.sendMessage("Tôi được làm ra bởi CatalizCS và SpermLord", threadID, messageID);
+				else if (body.toString() === "I am not programmed to respond to this dialect of English.") return api.sendMessage("Tôi không được lập trình để nói những thứ như này", threadID, messageID);
+				else if (body.toString() === "StringJoin(CalculateParse`Content`Calculate`InternetData(Automatic, Name))") return api.sendMessage("Tôi không biết phải trả lời như nào", threadID, messageID);
+				else return api.sendMessage(body, threadID, messageID);
+			});
+		}
+
+		//hoá học
+		if (contentMessage.indexOf(`${prefix}balance`) == 0) {
+			const balance = require('chem-eb');
+			if (event.type == "message_reply") {
+				var eventContent = event.messageReply.body;
+				return api.sendMessage(`✅ ${balance(eventContent)}`, threadID, messageID);
+			} else {
+				var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
+				return api.sendMessage(`✅ ${balance(eventContent)}`, threadID, messageID);
+			}
+		}
+
+	/* ==================== NSFW Commands ==================== */
 
 		//nhentai ramdom code
 		if (contentMessage == `${prefix}nhentai -r`) return api.sendMessage(`Code lý tưởng của nii-chan là: ${Math.floor(Math.random() * 99999)}`, threadID, messageID);
@@ -1387,8 +1222,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			else return api.sendMessage("Mặt sấp!", threadID, messageID);
 		}
 
-		//balance
-		if (contentMessage.indexOf(`${prefix}kẹt ngân`) == 0) {
+		//money
+		if (contentMessage.indexOf(`${prefix}money`) == 0) {
 			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			var mention = Object.keys(event.mentions)[0];
 			if (!content) return economy.getMoney(senderID).then((moneydb) => api.sendMessage(`Số tiền của bạn hiện đang có là: ${moneydb} đô`, threadID, messageID));
@@ -1439,7 +1274,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return;
 		}
 
-		if (contentMessage == `${prefix}thăm ngàn`) {
+		if (contentMessage == `${prefix}work`) {
 			let cooldown = 1200000;
 			economy.getWorkTime(senderID).then((lastWork) => {
 				if (lastWork !== null && cooldown - (Date.now() - lastWork) > 0) {
@@ -1621,7 +1456,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return;
 		}
 
-		/* ==================== Media Commands ==================== */
+	/* ==================== Media Commands ==================== */
 
 		//get video facebook
 		if (contentMessage.indexOf(`${prefix}facebook -p`) == 0) {
@@ -1739,6 +1574,247 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					media.youtubeMusic(content, callback);
 				});
 			};
+			return;
+		}
+
+		//anime
+		if (contentMessage.indexOf(`${prefix}anime`) == 0) {
+			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
+			var jsonData = fs.readFileSync(__dirname + "/src/anime.json");
+			var data = JSON.parse(jsonData);
+
+			var url;
+			if (data.sfw.hasOwnProperty(content)) url = data.sfw[content];
+			else if (data.nsfw.hasOwnProperty(content)) url = data.nsfw[content];
+			else if (!content || !data.nsfw.hasOwnProperty(content) || !data.sfw.hasOwnProperty(content)) {
+				let sfwList = [];
+				let nsfwList = [];
+				Object.keys(data.sfw).forEach(endpoint => sfwList.push(endpoint));
+				Object.keys(data.nsfw).forEach(endpoint => nsfwList.push(endpoint));
+				let sfwTags = sfwList.join(', ');
+				let nsfwTags = nsfwList.join(', ');
+				return api.sendMessage(`=== Tất cả các tag SFW ===\n` + sfwTags + `\n\n=== Tất cả các tag NSFW ===\n` + nsfwTags, threadID, messageID);
+			}
+
+			return request(url, (error, response, body) => {
+				let picData = JSON.parse(body);
+				let getURL = picData.url;
+				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
+				let callback = function() {
+					api.sendMessage({
+						body: "",
+						attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)
+					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
+				};
+				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
+			});
+		}
+
+		//meme
+		if (contentMessage == `${prefix}meme`)
+			return request("https://meme-api.herokuapp.com/gimme/memes", (err, response, body) => {
+				if (err) throw err;
+				var content = JSON.parse(body);
+				let title = content.title;
+				var baseurl = content.url;
+				let callback = function() {
+					api.sendMessage({
+						body: `${title}`,
+						attachment: fs.createReadStream(__dirname + "/src/meme.jpg")
+					}, threadID, () => fs.unlinkSync(__dirname + "/src/meme.jpg"), messageID);
+				};
+				request(baseurl).pipe(fs.createWriteStream(__dirname + `/src/meme.jpg`)).on("close", callback);
+			});
+
+		//gif
+		if (contentMessage.indexOf(`${prefix}gif`) == 0) {
+			var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
+			if (content.length == -1) return api.sendMessage(`Bạn đã nhập sai format, vui lòng ${prefix}help gif để biết thêm chi tiết!`, threadID, messageID);
+			if (content.indexOf(`cat`) !== -1) {
+				request(`https://api.tenor.com/v1/random?key=${tenor}&q=cat&limit=1`, (err, response, body) => {
+					if (err) throw err;
+					var string = JSON.parse(body);
+					var stringURL = string.results[0].media[0].tinygif.url;
+					console.log(stringURL);
+					let callback = function() {
+						api.sendMessage({
+							body: "",
+							attachment: fs.createReadStream(__dirname + `/src/randompic.gif`)
+						}, threadID, () => fs.unlinkSync(__dirname + `/src/randompic.gif`));
+					};
+					request(stringURL).pipe(fs.createWriteStream(__dirname + `/src/randompic.gif`)).on("close", callback);
+				});
+				return;
+			}
+
+			else if (content.indexOf(`dog`) !== -1) {
+				request(`https://api.tenor.com/v1/random?key=${tenor}&q=dog&limit=1`, (err, response, body) => {
+					if (err) throw err;
+					var string = JSON.parse(body);
+					var stringURL = string.results[0].media[0].tinygif.url;
+					let callback = function() {
+						api.sendMessage({
+							body: "",
+							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
+						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
+					};
+					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
+				});
+				return;
+			}
+
+			else if (content.indexOf(`capoo`) !== -1) {
+				request(`https://api.tenor.com/v1/random?key=${tenor}&q=capoo&limit=1`, (err, response, body) => {
+					if (err) throw err;
+					var string = JSON.parse(body);
+					var stringURL = string.results[0].media[0].tinygif.url;
+					let callback = function() {
+						api.sendMessage({
+							body: "",
+							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
+						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
+					};
+					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
+				});
+				return;
+			}
+
+			else if (content.indexOf(`mixi`) !== -1) {
+				request(`https://api.tenor.com/v1/random?key=${tenor}&q=mixigaming&limit=1`, (err, response, body) => {
+					if (err) throw err;
+					var string = JSON.parse(body);
+					var stringURL = string.results[0].media[0].tinygif.url;
+					let callback = function() {
+						api.sendMessage({
+							body: "",
+							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
+						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
+					};
+					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
+				});
+				return;
+			}
+
+			else if (content.indexOf(`bomman`) !== -1) {
+				request(`https://api.tenor.com/v1/random?key=${tenor}&q=bommanrage&limit=1`, (err, response, body) => {
+					if (err) throw err;
+					var string = JSON.parse(body);
+					var stringURL = string.results[0].media[0].tinygif.url;
+					let callback = function() {
+						api.sendMessage({
+							body: "",
+							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
+						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
+					};
+					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
+				});
+				return;
+			}
+			else return api.sendMessage(`Tag của bạn nhập không tồn tại, vui lòng đọc hướng dẫn sử dụng trong ${prefix}help gif`, threadID, messageID);
+		}
+
+		//hug
+		if (contentMessage.indexOf(`${prefix}hug`) == 0 && contentMessage.indexOf('@') !== -1)
+			return request('https://nekos.life/api/v2/img/hug', (err, response, body) =>{
+				let picData = JSON.parse(body);
+				let getURL = picData.url;
+				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
+				let tag = contentMessage.slice(prefix.length + 5, contentMessage.length).replace("@", "");
+				let callback = function() {
+					api.sendMessage({
+						body: tag + ", I wanna hug you ❤️",
+						mentions: [
+							{
+								tag: tag,
+								id: Object.keys(event.mentions)[0]
+							}
+						],
+						attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)
+					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
+				};
+				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
+			});
+
+		//kiss
+		if (contentMessage.indexOf(`${prefix}kiss`) == 0 && contentMessage.indexOf('@') !== -1)
+			return request('https://nekos.life/api/v2/img/kiss', (err, response, body) =>{
+				let picData = JSON.parse(body);
+				let getURL = picData.url;
+				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
+				let tag = contentMessage.slice(prefix.length + 6, contentMessage.length).replace("@", "");
+				let callback = function() {
+					api.sendMessage({
+						body: tag + ", I wanna kiss you ❤️",
+						mentions: [
+							{
+								tag: tag,
+								id: Object.keys(event.mentions)[0]
+							}
+						],
+						attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)
+					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
+				};
+				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
+			});
+
+		//slap
+		if (contentMessage.indexOf(`${prefix}slap`) == 0 && contentMessage.indexOf('@') !== -1)
+			return request('https://nekos.life/api/v2/img/slap', (err, response, body) =>{
+				let picData = JSON.parse(body);
+				let getURL = picData.url;
+				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
+				let tag = contentMessage.slice(prefix.length + 5, contentMessage.length).replace("@", "");
+				let callback = function() {
+					api.sendMessage({
+						body: tag + ", take this slap 😈",
+						mentions: [
+							{
+								tag: tag,
+								id: Object.keys(event.mentions)[0]
+							}
+						],
+						attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)
+					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
+				};
+				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
+			});
+
+		//saucenao
+		if (contentMessage.indexOf(`${prefix}saucenao`) == 0) {
+			if (event.type != "message_reply") return api.sendMessage(`Vui lòng bạn reply bức ảnh cần phải tìm!`, threadID, messageID);
+			var BaseJson = event.messageReply.attachments;
+			if (event.messageReply.attachments.length > 1) return api.sendMessage(`Vui lòng reply chỉ một ảnh!`, threadID, messageID);
+			if (event.messageReply.attachments[0].type == 'photo') {
+				if (saucenao == '' || typeof saucenao == undefined) return api.sendMessage(`Chưa có api của saucenao!`, threadID, messageID);
+				var imgURL = event.messageReply.attachments[0].url;
+				const sagiri = require('sagiri'),
+				search = new sagiri(saucenao, {
+					numRes: 1
+				});
+				search.getSauce(imgURL).then(response => {
+					let data = response[0];
+					let results = {
+						thumbnail: data.original.header.thumbnail,
+						similarity: data.similarity,
+						material: data.original.data.material || 'none',
+						characters: data.original.data.characters || 'none',
+						creator: data.original.data.creator || 'none',
+						site: data.site,
+						url: data.url
+					};
+					const minSimilarity = 30;
+					if (minSimilarity <= ~~results.similarity) {
+						api.sendMessage(
+						'Đây là kết quả tìm kiếm được\n' +
+						'-------------------------\n' +
+						'- Độ tương tự: ' + results.similarity + '%\n' +
+						'- Material: ' + results.material + '\n' +
+						'- Characters: ' + results.characters + '\n' +
+						'- Creator: ' + results.creator + '\n' +
+						'- Original site: ' + results.site + ' - ' + results.url, threadID, messageID);
+					} else api.sendMessage(`Không thấy kết quả nào trùng với ảnh bạn đang tìm kiếm :'(`, threadID, messageID);
+				});
+			}
 			return;
 		}
 

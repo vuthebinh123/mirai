@@ -12,7 +12,7 @@
 	<img alt="size" src="https://img.shields.io/github/repo-size/roxtigger2003/mirai.svg?style=flat-square&label=size">
 	<img alt="code-version" src="https://img.shields.io/badge/dynamic/json?color=red&label=code%20version&prefix=v&query=%24.version&url=https%3A%2F%2Fraw.githubusercontent.com%2Froxtigger2003%2Fmirai%2Fmaster%2Fpackage.json&style=flat-square">
 	<a href="https://github.com/roxtigger2003/mirai/commits"><img alt="commits" src="https://img.shields.io/github/commit-activity/m/roxtigger2003/mirai.svg?label=commit&style=flat-square"></a>
-        <a href="https://app.codacy.com/manual/roxtigger2003/mirai?utm_source=github.com&utm_medium=referral&utm_content=roxtigger2003/mirai&utm_campaign=Badge_Grade_Dashboard"><img alt="Codacy Badge" src="https://api.codacy.com/project/badge/Grade/4025e6e2060c425b9731ec1eeb09489f"></a>
+	<a href="https://app.codacy.com/manual/roxtigger2003/mirai?utm_source=github.com&utm_medium=referral&utm_content=roxtigger2003/mirai&utm_campaign=Badge_Grade_Dashboard"><img alt="Codacy Badge" src="https://api.codacy.com/project/badge/Grade/4025e6e2060c425b9731ec1eeb09489f"></a>
 
 </p>
 

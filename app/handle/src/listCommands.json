@@ -7,10 +7,10 @@
 		"group":"general"
 	},
 	{
-		"name":"sumi",
-		"decs":"Gọi sumi",
-		"usage":"sumi",
-		"example":"sumi",
+		"name":"mirai",
+		"decs":"Gọi mirai",
+		"usage":"mirai hoặc mirai",
+		"example":"!mirai",
 		"group":"general"
 	},
 	{
@@ -24,21 +24,21 @@
 		"name":"hug",
 		"decs":"ôm người bạn tag",
 		"usage":"hug [tag người bạn cần ôm]",
-		"example":"hug @Sumi-Chan",
+		"example":"hug @Mirai-Chan",
 		"group":"general"
 	},
 	{
 		"name":"kiss",
 		"decs":"hôn người bạn tag",
 		"usage":"kiss [tag người bạn cần hôn]",
-		"example":"kiss @Sumi-Chan",
+		"example":"kiss @Mirai-Chan",
 		"group":"general"
 	},
 	{
 		"name":"slap",
 		"decs":"tán sml người bạn tag",
 		"usage":"slap [tag người bạn cần hôn]",
-		"example":"slap @Sumi-Chan",
+		"example":"slap @Mirai-Chan",
 		"group":"general"
 	},
 	{
@@ -80,7 +80,7 @@
 		"name":"say",
 		"decs":"Điều khiển bot biến văn bản thành giọng đọc",
 		"usage":"say [en,ko,ru,jp] [Văn bản] nếu sử dụng tiếng việc thì phần language để trống",
-		"example":"say Sumi-Chan xin chào tất cả mọi người",
+		"example":"say Mirai-Chan xin chào tất cả mọi người",
 		"group":"general"
 	},
 	{
@@ -94,7 +94,7 @@
 		"name":"echo",
 		"decs":"Điều khiển bot nói lại văn bản bạn viết",
 		"usage":"echo [văn bản hoặc nội dung]",
-		"example":"echo Sumi-Chan xin chào",
+		"example":"echo Mirai-Chan xin chào",
 		"group":"general"
 	},
 	{
@@ -113,7 +113,7 @@
 	},
 	{
 		"name":"waifu",
-		"decs":"Thử vận may với Sumi-Chan ",
+		"decs":"Thử vận may với Mirai-Chan ",
 		"usage":"waifu",
 		"example":"waifu",
 		"group":"wibu"
@@ -121,15 +121,15 @@
 	{
 		"name":"roll",
 		"decs":"Lấy con số may mắn của bạn, please đừng đi đánh đề :<",
-		"usage":"roll",
-		"example":"roll",
+		"usage":"roll [min] [max]",
+		"example":"roll 0 100",
 		"group":"general"
 	},
 	{
 		"name":"rank",
 		"decs":"Lấy rank hiện tại của bạn trên hệ thống bot",
 		"usage":"rank [tag người cần lấy] hoặc rank [id] hoặc rank",
-		"example":"rank @Sumi-chan",
+		"example":"rank @Mirai-chan",
 		"group":"system"
 	},
 	{
@@ -228,7 +228,7 @@
 		"decs":"Bảo bot có thể làm toán",
 		"usage":"math [phép toán]",
 		"example":"math 1+1",
-		"group":"general"
+		"group":"Học Tập"
 	},
 	{
 		"name":"giveaway",
@@ -287,7 +287,7 @@
 		"group":"general"
 	},
 	{
-		"name":"kẹt ngân",
+		"name":"money",
 		"decs":"xem số tiền bạn đang có",
 		"usage":"kẹt ngân",
 		"example":"kẹt ngân",
@@ -301,10 +301,10 @@
 		"group":"economy"
 	},
 	{
-		"name":"thăm ngàn",
+		"name":"work",
 		"decs":"có làm thì mới có ăn",
-		"usage":"thăm ngàn",
-		"example":"thăm ngàn",
+		"usage":"work",
+		"example":"work",
 		"group":"economy"
 	},
 	{
@@ -404,5 +404,19 @@
 		"usage":"wake [thời gian]",
 		"example":"wake 06:00",
 		"group":"general"
+	},
+	{
+		"name":"balance",
+		"decs":"Cân bằng phương trình hoá học một cách nhanh nhất có thể .-.",
+		"usage":"balance [Phương trình cần cân bằng]",
+		"example":"balance C38H76N2O2 + NaNO2 = Na2O + CO2 + H2O + N2",
+		"group":"Học Tập"
+	},
+	{
+		"name":"morse",
+		"decs":"Mã hoá những đoạn văn bản của bạn trở thành mã morse",
+		"usage":"morse [encode hoặc decode] [đoạn text cần mã hoá]",
+		"example":"morse encode hello cac ban",
+		"group":"Encode, Decode"
 	}
 ]
