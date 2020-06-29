@@ -417,6 +417,6 @@
 		"decs":"Mã hoá những đoạn văn bản của bạn trở thành mã morse",
 		"usage":"morse [encode hoặc decode] [đoạn text cần mã hoá]",
 		"example":"morse encode hello cac ban",
-		"group":"Encode, Decode"
+		"group":"cipher"
 	}
 ]
