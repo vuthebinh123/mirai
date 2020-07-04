@@ -44,12 +44,12 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 # Installation 
 
-## Yêu cầu để có thể sử dụng bot:
+## Yêu cầu:
   - [NodeJS](https://nodejs.org/en/) và git(không bắt buộc)
   - Trình độ sử dụng NodeJS ở mức trung bình
   - Một tài khoản Facebook dùng để làm bot
  
-## Hướng dẫn cài đặt (Linux/macOS/WSL/Windows đã cài windows-build-tools):  
+## Cài đặt (Linux/macOS/WSL/Windows đã cài windows-build-tools):  
 + Step 1: Clone hoặc download project, nếu máy bạn có git hãy sử dụng lệnh:
 ```bash
 git clone https://github.com/roxtigger2003/mirai
