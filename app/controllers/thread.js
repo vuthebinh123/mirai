@@ -2,13 +2,6 @@ const logger = require("../modules/log.js");
 module.exports = function ({ models, api }) {
 	const Thread = models.use('thread');
 
-	function getThreads(where = {}) {
-		return Thread.findAll({ where }).then(e => e.map(e => e.get({ plain: true }))).catch((error) => {
-			logger(error, 2);
-			return [];
-		})
-	}
-
 	function createThread(threadID) {
 		api.getThreadInfo(threadID, (err, info) => {
 			if (err) return logger(err, 2);
@@ -18,6 +11,13 @@ module.exports = function ({ models, api }) {
 			}).catch((error) => {
 				logger(error, 2);
 			})
+		})
+	}
+
+	function getThreads(where = {}) {
+		return Thread.findAll({ where }).then(e => e.map(e => e.get({ plain: true }))).catch((error) => {
+			logger(error, 2);
+			return [];
 		})
 	}
 
@@ -63,7 +63,7 @@ module.exports = function ({ models, api }) {
 		return unban(threadID, true);
 	}
 
-	function offResend(threadID, blockResend = true) {
+	function blockResend(threadID, blockResend = true) {
 		return Thread.findOne({
 			where: {
 				threadID
@@ -79,8 +79,28 @@ module.exports = function ({ models, api }) {
 		})
 	}
 
-	function onResend(threadID) {
-		return offResend(threadID, false);
+	function unblockResend(threadID) {
+		return blockResend(threadID, false);
+	}
+
+	function blockNSFW(threadID, blockNSFW = true) {
+		return Thread.findOne({
+			where: {
+				threadID
+			}
+		}).then(function(thread) {
+			if (!thread) return;
+			return thread.update({ blockNSFW });
+		}).then(function() {
+			return true;
+		}).catch(function(error) {
+			logger(error, 2);
+			return false;
+		})
+	}
+
+	function unblockNSFW(threadID) {
+		return blockNSFW(threadID, false);
 	}
 
 	return {
@@ -90,7 +110,9 @@ module.exports = function ({ models, api }) {
 		changeName,
 		ban,
 		unban,
-		offResend,
-		onResend
+		blockResend,
+		unblockResend,
+		blockNSFW,
+		unblockNSFW
 	}
 }

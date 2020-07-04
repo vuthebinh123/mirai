@@ -1,7 +1,7 @@
 var ytdl = require("ytdl-core");
 var ffmpeg = require("fluent-ffmpeg");
 var ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-var fs = require("fs");
+var fs = require("fs-extra");
 var request = require("request");
 ffmpeg.setFfmpegPath(ffmpegPath);
 

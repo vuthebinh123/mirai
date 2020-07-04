@@ -1,6 +1,6 @@
 const jimp = require("jimp");
 const text2png = require("text2png");
-const fs = require("fs");
+const fs = require("fs-extra");
 const request = require("request-promise");
 const path = require("path");
 

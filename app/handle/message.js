@@ -1,11 +1,12 @@
 module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, economy }) {
 	/* ================ Config ==================== */
-	let {prefix, googleSearch, wolfarm, yandex, openweather, tenor, saucenao, admins, ENDPOINT} = config;
-	const fs = require("fs");
+	let {prefix, googleSearch, wolfarm, yandex, openweather, tenor, saucenao, admins, ENDPOINT, nsfwGodMode} = config;
+	const fs = require("fs-extra");
 	const moment = require("moment-timezone");
 	const request = require("request");
 	const ms = require("parse-ms");
 	const stringSimilarity = require('string-similarity');
+	var resetNSFW = false;
 
 	/* ================ CronJob ==================== */
 
@@ -47,28 +48,23 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var oldData = JSON.parse(fs.readFileSync(__dirname + "/src/listThread.json"));
 				var timer = moment.tz("Asia/Ho_Chi_Minh").format("HH:mm");
 				groupids.forEach(item => {
-					//chúc đi ngủ
 					while (timer == "23:00" && !oldData.sleep.includes(item)) {
 						api.sendMessage(`Tới giờ ngủ rồi đấy nii-chan, おやすみなさい!`, item);
 						oldData.sleep.push(item);
 						break;
 					}
-
-					//chào buổi sáng
 					while (timer == "07:00" && !oldData.wake.includes(item)) {
 						api.sendMessage(`おはようございます các nii-chan uwu`, item);
 						oldData.wake.push(item);
 						break;
 					}
-
-					//những sự thật mỗi ngày
 					while (timer == "08:00" && !oldData.fact.includes(item)) {
 						oldData.fact.push(item);
 						request("https://random-word-api.herokuapp.com/word?number=1", (err, response, body) => {
 							if (err) throw err;
 							const randomfacts = require("@dpmcmlxxvi/randomfacts");
 							var retrieve = JSON.parse(body);
-							const fact = randomfacts.make(retrieve);
+							var fact = randomfacts.make(retrieve);
 							api.sendMessage('📖 Fact của ngày hôm nay:\n "' + fact + '".', item);
 						});
 						break;
@@ -76,6 +72,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(oldData));
 				});
 				if (timer == "08:05") fs.unlinkSync(__dirname + "/src/listThread.json");
+				if (timer == "00:00")
+					if (resetNSFW == false) {
+						resetNSFW = true;
+						economy.resetNSFW();
+					}
 			}, 1000);
 		});
 	}
@@ -91,6 +92,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		});
 	}
 
+	if (!fs.existsSync(__dirname + "/src/shortcut.json")) {
+		var template = [];
+		fs.writeFileSync(__dirname + "/src/shortcut.json", JSON.stringify(template));
+		return modules.log('Tạo file shortcut mới thành công!');
+	}
+
 	return function({ event }) {
 		let { body: contentMessage, senderID, threadID, messageID } = event;
 		senderID = parseInt(senderID);
@@ -98,7 +105,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		messageID = messageID.toString();
 
 		if (__GLOBAL.userBlocked.includes(senderID)) return;
-
 		User.createUser(senderID);
 		Thread.createThread(threadID);
 
@@ -109,9 +115,14 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 	/* ================ Staff Commands ==================== */
 
+		//lấy shortcut
+		if (contentMessage.length !== -1) {
+			var shortcut = JSON.parse(fs.readFileSync(__dirname + "/src/shortcut.json"));
+			if (shortcut.some(item => item.in == contentMessage)) return api.sendMessage(shortcut.find(item => item.in == contentMessage).out, threadID);
+		}
+
 		//lấy file cmds
-		var nocmdFile = fs.readFileSync(__dirname + "/src/cmds.json");
-		var nocmdData = JSON.parse(nocmdFile);
+		var nocmdData = JSON.parse(fs.readFileSync(__dirname + "/src/cmds.json"));
 
 		//tạo 1 đối tượng mới nếu group chưa có trong file cmds
 		if (!nocmdData.banned.some(item => item.id == threadID)) {
@@ -125,9 +136,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//lấy lệnh bị cấm trong group
 		var cmds = nocmdData.banned.find(item => item.id == threadID).cmds;
-		for (const item of cmds) {
-			if (contentMessage.indexOf(prefix + item) == 0) return api.sendMessage("Lệnh này đã bị cấm!", threadID);
-		}
+		for (const item of cmds) if (contentMessage.indexOf(prefix + item) == 0) return api.sendMessage("Lệnh này đã bị cấm!", threadID);
 
 		//unban command
 		if (contentMessage.indexOf(`${prefix}unban command`) == 0 && admins.includes(senderID)) {
@@ -266,7 +275,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
 			if (content == 'off') {
 				if (__GLOBAL.resendBlocked.includes(threadID)) return api.sendMessage("Nhóm này đã bị tắt resend từ trước!", threadID, messageID);
-				Thread.offResend(threadID).then((success) => {
+				Thread.blockResend(threadID).then((success) => {
 					if (!success) return api.sendMessage("Oops, không thể tắt resend ở nhóm này!", threadID);
 					api.sendMessage("Đã tắt resend tin nhắn thành công!", threadID);
 					__GLOBAL.resendBlocked.push(threadID);
@@ -274,7 +283,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			}
 			else if (content == 'on') {
 				if (!__GLOBAL.resendBlocked.includes(threadID)) return api.sendMessage("Nhóm này chưa bị tắt resend", threadID);
-				Thread.onResend(threadID).then(success => {
+				Thread.unblockResend(threadID).then(success => {
 					if (!success) return api.sendMessage("Oops, không thể bật resend ở nhóm này!", threadID);
 					api.sendMessage("Đã bật resend tin nhắn, tôi sẽ nhắc lại tin nhắn bạn đã xoá 😈", threadID);
 					__GLOBAL.resendBlocked.splice(__GLOBAL.resendBlocked.indexOf(threadID), 1);
@@ -291,8 +300,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				if (err) throw err;
 				list.forEach(item => {
 					if (item.isGroup == true && item.threadID != threadID) api.sendMessage(content, item.threadID);
-					modules.log("Gửi thông báo mới thành công!");
 				});
+				modules.log("Gửi thông báo mới thành công!");
 			});
 			return;
 		}
@@ -314,7 +323,29 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			})()
 			return api.sendMessage("Thông tin lỗi của bạn đã được gửi về admin!", threadID, messageID);
 		}
-		
+
+		//nsfw
+		if (contentMessage.indexOf(`${prefix}nsfw`) == 0 && admins.includes(senderID)) {
+			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
+			if (content == 'off') {
+				if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đã bị tắt NSFW từ trước!", threadID, messageID);
+				Thread.blockNSFW(threadID).then((success) => {
+					if (!success) return api.sendMessage("Oops, không thể tắt NSFW ở nhóm này!", threadID);
+					api.sendMessage("Đã tắt NSFW thành công!", threadID);
+					__GLOBAL.NSFWBlocked.push(threadID);
+				})
+			}
+			else if (content == 'on') {
+				if (!__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này chưa bị tắt NSFW", threadID);
+				Thread.unblockNSFW(threadID).then(success => {
+					if (!success) return api.sendMessage("Oops, không thể bật NSFW ở nhóm này!", threadID);
+					api.sendMessage("Đã bật NSFW thành công!", threadID);
+					__GLOBAL.NSFWBlocked.splice(__GLOBAL.NSFWBlocked.indexOf(threadID), 1);
+				});
+			}
+			return;
+		}
+
 		//restart
 		if (contentMessage == `${prefix}restart` && admins.includes(senderID)) return api.sendMessage(`Hệ thống restart khẩn ngay bây giờ!!`, threadID, () =>  require("node-cmd").run("pm2 restart 0") , messageID);
 
@@ -322,24 +353,24 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//add thêm lệnh cho help
 		if (contentMessage.indexOf(`${prefix}sethelp`) == 0 && admins.includes(senderID)) {
-			var string = contentMessage.slice(prefix.length + 8, contentMessage.length); //name | decs | usage | example | group
+			var string = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			if (string.length == 0) return api.sendMessage("Vui lòng nhập hướng dẫn lệnh cần thêm theo format!", threadID, messageID);
 
 			let stringIndexOf = string.indexOf(" | ");
-			let name = string.slice(0, stringIndexOf); //name
-			let center = string.slice(stringIndexOf + 1, string.length); //decs | usage | example | group
+			let name = string.slice(0, stringIndexOf);
+			let center = string.slice(stringIndexOf + 1, string.length);
 
 			let stringIndexOf2 = center.indexOf(" | ");
-			let decs = center.slice(0, stringIndexOf2); //decs
-			let stringNext = center.slice(stringIndexOf2 + 1, center.length); //usage | example | group
+			let decs = center.slice(0, stringIndexOf2);
+			let stringNext = center.slice(stringIndexOf2 + 1, center.length);
 
 			let stringIndexOf3 = stringNext.indexOf(" | ");
-			let usage = stringNext.slice(0, stringIndexOf3); //usage
-			let stringNext2 = stringNext.slice(stringIndexOf3 + 1, stringNext.length); //example | group
+			let usage = stringNext.slice(0, stringIndexOf3);
+			let stringNext2 = stringNext.slice(stringIndexOf3 + 1, stringNext.length);
 
 			let stringIndexOf4 = stringNext2.indexOf(" | ");
-			let example = stringNext2.slice(0, stringIndexOf4); //example
-			let group = stringNext2.slice(stringIndexOf4 + 1, stringNext2.length); //group
+			let example = stringNext2.slice(0, stringIndexOf4);
+			let group = stringNext2.slice(stringIndexOf4 + 1, stringNext2.length);
 
 			var oldDataJSON = JSON.parse(fs.readFileSync(__dirname + "/src/listCommands.json"));
 			var pushJSON = {
@@ -385,7 +416,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				});
 				helpGroup.forEach(help => {
 					let helpCmds = help.cmds.join(', ');
-					helpMsg += `=== ${help.group.charAt(0).toUpperCase() + help.group.slice(1)} ===\n${helpCmds}\n\n`
+					helpMsg += `==== ${help.group.charAt(0).toUpperCase() + help.group.slice(1)} ====\n${helpCmds}\n\n`
 				});
 				return api.sendMessage(helpMsg, threadID, messageID);
 			}
@@ -418,8 +449,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					});
 					helpGroup.forEach(help => {
 						let helpCmds = help.cmds.join(', ');
-						helpMsg += `*** Lệnh không hợp lệ, đây là danh sách các lệnh ***\n===== ${help.group.charAt(0).toUpperCase() + help.group.slice(1)} =====\n${helpCmds}\n\n `
+						helpMsg += `===== ${help.group.charAt(0).toUpperCase() + help.group.slice(1)} =====\n${helpCmds}\n\n `
 					});
+					helpMsg = '>>> Lệnh không hợp lệ, đây là danh sách các lệnh <<<\n\n' + helpMsg;
 					return api.sendMessage(helpMsg, threadID, messageID);
 				}
 			}
@@ -464,36 +496,180 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			}
 		}
 
-	/* ==================== Encode and Decode Commands ================*/
+	/* ==================== Cipher Commands ================*/
 
 		//morse
 		if (contentMessage.indexOf(`${prefix}morse`) == 0) {
 			const morsify = require('morsify');
-			const content = contentMessage.slice(prefix.length + 6, contentMessage.length);
+			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
 			if (event.type == "message_reply") {
-				if (content.indexOf('encode') !== -1) {
-					var eventContent = event.messageReply.body;
-					const encoded = morsify.encode(eventContent);
-					return api.sendMessage(encoded, threadID, messageID);
-				} else if (content.indexOf('decode') !== -1) {
-					var eventContent = event.messageReply.body;
-					var decoded = morsify.decode(eventContent);
-					return api.sendMessage(decoded, threadID, messageID);
-				} else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
-			} else {
 				if (content.indexOf('encode') == 0) {
-					var sContent = content.slice(7, contentMessage.length);
-					const encoded = morsify.encode(sContent);
+					var encoded = morsify.encode(event.messageReply.body);
 					return api.sendMessage(encoded, threadID, messageID);
 				} else if (content.indexOf('decode') == 0) {
-					var sContent = content.slice(8, contentMessage.length);
-					var decoded = morsify.decode(sContent);
+					var decoded = morsify.decode(event.messageReply.body);
+					return api.sendMessage(decoded, threadID, messageID);
+				} else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
+			}
+			else {
+				if (content.indexOf('encode') == 0) {
+					var msg = content.slice(7, contentMessage.length);
+					var encoded = morsify.encode(msg);
+					return api.sendMessage(encoded, threadID, messageID);
+				} else if (content.indexOf('decode') == 0) {
+					var msg = content.slice(7, contentMessage.length);
+					var decoded = morsify.decode(msg);
 					return api.sendMessage(decoded, threadID, messageID);
 				} else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
 			}
 		}
 
+		//caesar
+		if (contentMessage.indexOf(`${prefix}caesar`) == 0) {
+			if (process.env.CAESAR == '' || process.env.CAESAR == null) return api.sendMessage('Chưa đặt mật khẩu CAESAR trong file .env', threadID, messageID);
+			const Caesar = require('caesar-salad').Caesar;
+			var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
+			if (event.type == "message_reply") {
+				if (content.indexOf('encode') == 0) {
+					var encoded = Caesar.Cipher(process.env.CAESAR).crypt(event.messageReply.body);
+					return api.sendMessage(encoded, threadID, messageID);
+				}
+				else if (content.indexOf('decode') == 0) {
+					var decoded = Caesar.Decipher(process.env.CAESAR).crypt(event.messageReply.body);
+					return api.sendMessage(decoded, threadID, messageID);
+				}
+				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help caesar`, threadID, messageID);
+			}
+			else {
+				if (content.indexOf('encode') == 0) {
+					var msg = content.slice(7, contentMessage.length);
+					var encoded = Caesar.Cipher(process.env.CAESAR).crypt(msg);
+					return api.sendMessage(encoded, threadID, messageID);
+				}
+				else if (content.indexOf('decode') == 0) {
+					var msg = content.slice(7, contentMessage.length);
+					var decoded = Caesar.Decipher(process.env.CAESAR).crypt(msg);
+					return api.sendMessage(decoded, threadID, messageID);
+				}
+				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help caesar`, threadID, messageID);
+			}
+		}
+
+		//vigenere
+		if (contentMessage.indexOf(`${prefix}vigenere`) == 0) {
+			if (process.env.VIGENERE == '' || process.env.VIGENERE == null) return api.sendMessage('Chưa đặt mật khẩu VIGENERE trong file .env', threadID, messageID);
+			const Vigenere = require('caesar-salad').Vigenere;
+			var content = contentMessage.slice(prefix.length + 9, contentMessage.length);
+			if (event.type == "message_reply") {
+				if (content.indexOf('encode') == 0) {
+					var encoded = Vigenere.Cipher(process.env.VIGENERE).crypt(event.messageReply.body);
+					return api.sendMessage(encoded, threadID, messageID);
+				}
+				else if (content.indexOf('decode') == 0) {
+					var decoded = Vigenere.Decipher(process.env.VIGENERE).crypt(event.messageReply.body);
+					return api.sendMessage(decoded, threadID, messageID);
+				}
+				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help vigenere`, threadID, messageID);
+			}
+			else {
+				if (content.indexOf('encode') == 0) {
+					var msg = content.slice(7, contentMessage.length);
+					var encoded = Vigenere.Cipher(process.env.VIGENERE).crypt(msg);
+					return api.sendMessage(encoded, threadID, messageID);
+				}
+				else if (content.indexOf('decode') == 0) {
+					var msg = content.slice(7, contentMessage.length);
+					var decoded = Vigenere.Decipher(process.env.VIGENERE).crypt(msg);
+					return api.sendMessage(decoded, threadID, messageID);
+				}
+				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help vigenere`, threadID, messageID);
+			}
+		}
+
+		//rot47
+		if (contentMessage.indexOf(`${prefix}rot47`) == 0) {
+			const ROT47 = require('caesar-salad').ROT47;
+			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
+			if (event.type == "message_reply") {
+				if (content.indexOf('encode') == 0) {
+					var encoded = ROT47.Cipher().crypt(event.messageReply.body);
+					return api.sendMessage(encoded, threadID, messageID);
+				}
+				else if (content.indexOf('decode') == 0) {
+					var decoded = ROT47.Decipher().crypt(event.messageReply.body);
+					return api.sendMessage(decoded, threadID, messageID);
+				}
+				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help rot47`, threadID, messageID);
+			}
+			else {
+				if (content.indexOf('encode') == 0) {
+					var msg = content.slice(7, contentMessage.length);
+					var encoded = ROT47.Cipher().crypt(msg);
+					return api.sendMessage(encoded, threadID, messageID);
+				}
+				else if (content.indexOf('decode') == 0) {
+					var msg = content.slice(7, contentMessage.length);
+					var decoded = ROT47.Decipher().crypt(msg);
+					return api.sendMessage(decoded, threadID, messageID);
+				}
+				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help rot47`, threadID, messageID);
+			}
+		}
+
 	/* ==================== General Commands ================*/
+
+		//shortcut
+		if (contentMessage.indexOf(`${prefix}short`) == 0) {
+			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
+			if (!content) return api.sendMessage(`Không đúng format. Hãy tìm hiểu thêm tại ${prefix}help short.`, threadID, messageID);
+			if (content.indexOf(`del`) == 0) {
+				let delThis = contentMessage.slice(prefix.length + 10, contentMessage.length);
+				if (!delThis) return api.sendMessage("Chưa nhập shortcut cần xóa.", threadID, messageID);
+				return fs.readFile(__dirname + "/src/shortcut.json", "utf-8", (err, data) => {
+					if (err) throw err;
+					var oldData = JSON.parse(data);
+					if (!oldData.some(item => item.in == delThis)) return api.sendMessage("Shortcut này không tồn tại.", threadID, messageID);
+					oldData.splice(oldData.findIndex(x => x.in === delThis), 1);
+					fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => {
+						if (err) throw err;
+						api.sendMessage("Xóa shortcut thành công!", threadID, messageID);
+					});
+				});
+			}
+			else if (content.indexOf(`all`) == 0) 
+				return fs.readFile(__dirname + "/src/shortcut.json", "utf-8", (err, data) => {
+					if (err) throw err;
+					let allShortcuts = JSON.parse(data);
+					let msg = '';
+					allShortcuts.forEach(item => {
+						msg = msg + item.in + ' -> ' + item.out + '\n';
+					});
+					if (!msg) return api.sendMessage('Hiện tại không có shortcut nào.', threadID, messageID);
+					msg = 'Tất cả shortcut đang có là:\n' + msg;
+					api.sendMessage(msg, threadID, messageID);
+				});
+			else {
+				let narrow = content.indexOf(" => ");
+				let shortin = content.slice(0, narrow);
+				let shortout = content.slice(narrow + 4, content.length);
+				if (!shortin) return api.sendMessage("Bạn chưa nhập input.", threadID, messageID);
+				if (!shortout) return api.sendMessage("Bạn chưa nhập output.", threadID, messageID);
+				return fs.readFile(__dirname + "/src/shortcut.json", "utf-8", (err, data) => {
+					if (err) throw err;
+					var oldData = JSON.parse(data);
+					if (oldData.some(item => item.in == shortin)) return api.sendMessage("Shortcut này đã tồn tại!", threadID, messageID);
+					var pushJSON = {
+						in: shortin,
+						out: shortout
+					};
+					oldData.push(pushJSON);
+					fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => {
+						if (err) throw err;
+						api.sendMessage("Tạo shortcut mới thành công!", threadID, messageID);
+					});
+				});
+			}
+		}
 
 		//wake time calculator
 		if (contentMessage.indexOf(`${prefix}sleep`) == 0) {
@@ -545,8 +721,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//mlem
 		if (contentMessage == `${prefix}mlem` || contentMessage.indexOf('mlem') == 0) return api.sendMessage("( ͡°👅 ͡°)", threadID, messageID);
 
-		//care
-		if (contentMessage == `${prefix}care` || contentMessage.indexOf('care') == 0) return api.sendMessage("¯\\_(ツ)_/¯", threadID, messageID);
+		//idk
+		if (contentMessage == `${prefix}idk` || contentMessage.indexOf('idk') == 0) return api.sendMessage("¯\\_(ツ)_/¯", threadID, messageID);
 
 		//prefix
 		if (contentMessage.indexOf(`prefix`) == 0) return api.sendMessage(`Prefix là: ${prefix}`, threadID, messageID);
@@ -556,9 +732,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//simsimi
 		if (contentMessage.indexOf(`${prefix}sim`) == 0) {
+			return api.sendMessage('Hiện tại API Simsimi vẫn đang lỗi!', threadID, messageID);
 			const fetch = require('node-fetch');
-			var content = contentMessage.slice(pretix.length + 49
-			, contentMessage.length);
+			var content = contentMessage.slice(pretix.length + 49, contentMessage.length);
 			const params = new URLSearchParams();
 			params.set('lang', 'vi');
 			params.set('hoi', content);
@@ -749,8 +925,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//ramdom con số
 		if (contentMessage.indexOf(`${prefix}roll`) == 0) {
-			var content = contentMessage.slice(prefix.length + 5, contentMessage.length); //xx yy
-			var splitContent = content.split(" "); //{"xx","yy"}
+			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
+			var splitContent = content.split(" ");
 			var min = splitContent[0];
 			var max = splitContent[1];
 			if (isNaN(min) || isNaN(max)) return api.sendMessage('Dữ liệu bạn nhập không phải là một con số "/', threadID, messageID);
@@ -766,7 +942,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}rank`) == 0) {
 			const createCard = require("../controllers/rank_card");
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
-			if (content.length == 0) {
+			if (content.length == 0)
 				(async () => {
 					let name = await User.getName(senderID)
 					Rank.getPoint(senderID).then(point => createCard({ id: senderID, name, ...point })).then(path => {
@@ -778,9 +954,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							threadID, () => fs.unlinkSync(path), messageID
 						)
 					})
-				})()
-			}
-			else if (content.indexOf("@") !== -1) {
+				})();
+			else if (content.indexOf("@") !== -1)
 				for (var i = 0; i < Object.keys(event.mentions).length; i++) {
 					let uid = Object.keys(event.mentions)[i];
 					(async () => {
@@ -794,9 +969,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 								threadID, () => fs.unlinkSync(path), messageID
 							)
 						})
-					})()
+					})();
 				}
-			}
 			return;
 		}
 
@@ -809,11 +983,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			if (event.type == "message_reply") {
 				translateThis = event.messageReply.body
 				if (content.indexOf(" -> ") != -1) lang = content.substring(content.indexOf(" -> ") + 4);
-				else lang = 'vi'
+				else lang = 'vi';
 			}
 			else if (content.indexOf(" -> ") == -1) {
 				translateThis = content.slice(0, content.length)
-				lang = 'vi'
+				lang = 'vi';
 			}
 			return request(encodeURI(`https://translate.yandex.net/api/v1.5/tr.json/translate?key=${yandex}&text=${translateThis}&lang=${lang}`), (err, response, body) => {
 				if (err) return api.sendMessage("Server đã xảy ra vấn đề, vui lòng báo lại cho admin!!!", threadID, messageID)
@@ -833,7 +1007,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage == `${prefix}quotes`) {
 			var stringData = JSON.parse(fs.readFileSync(__dirname + "/src/quotes.json"));
 			var randomQuotes = stringData[Math.floor(Math.random() * stringData.length)];
-			return api.sendMessage('Quote: \n "' + randomQuotes.text + '"\n     -' + randomQuotes.author + "-", threadID, messageID);
+			return api.sendMessage('Quote:\n"' + randomQuotes.text + '"\n- ' + randomQuotes.author + ' -', threadID, messageID);
 		}
 
 		//uptime
@@ -939,7 +1113,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//localtion iss
 		if (contentMessage.indexOf(`${prefix}iss`) == 0) {
-			request (`http://api.open-notify.org/iss-now.json`, (err, response, body) => {
+			return request (`http://api.open-notify.org/iss-now.json`, (err, response, body) => {
 				if (err) throw err;
 				var jsonData = JSON.parse(body);
 				var position = jsonData["iss_position"];
@@ -966,11 +1140,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var data = JSON.parse(body);
 				api.sendMessage(
 					"Thông tin đợt phóng mới nhất của SpaceX:" +
-					"\n-Mission: " + data.mission_name +
-					"\n-Năm phóng: " + data.launch_year +
-					"\n-Thời gian phóng: " + data.launch_date_local +
-					"\n-Tên lửa: " + data.rocket.rocket_name +
-					"\n-Link Youtube: " + data.links.video_link,
+					"\n- Mission: " + data.mission_name +
+					"\n- Năm phóng: " + data.launch_year +
+					"\n- Thời gian phóng: " + data.launch_date_local +
+					"\n- Tên lửa: " + data.rocket.rocket_name +
+					"\n- Link Youtube: " + data.links.video_link,
 				threadID,messageID
 				);
 			});
@@ -1013,17 +1187,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			});
 		}
 
-		//count
-		if (contentMessage.indexOf(`${prefix}count`) == 0) return api.getThreadInfo(threadID, (err, info) => api.sendMessage("Tổng tin nhắn trong group này là: " + info.messageCount, threadID, messageID));
-
-		/* ==================== Học Tập Commands ==================== */
+		/* ==================== Study Commands ==================== */
 
 		//toán học
 		if (contentMessage.indexOf(`${prefix}math`) == 0) {
 			const wolfram = "http://api.wolframalpha.com/v2/result?appid=" + wolfarm + "&i=";
 			var m = contentMessage.slice(prefix.length + 5, contentMessage.length);
-			var o = m.replace(/ /g, "+");
-			var l = "http://lmgtfy.com/?q=" + o;
+			var l = "http://lmgtfy.com/?q=" + m.replace(/ /g, "+");
 			request(wolfram + encodeURIComponent(m), function(err, response, body) {
 				if (body.toString() === "Wolfram|Alpha did not understand your input") return api.sendMessage(l, threadID, messageID);
 				else if (body.toString() === "Wolfram|Alpha did not understand your input") return api.sendMessage("Tôi không hiểu câu hỏi của bạn", threadID, messageID);
@@ -1035,16 +1205,20 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			});
 		}
 
-		//hoá học
-		if (contentMessage.indexOf(`${prefix}balance`) == 0) {
-			const balance = require('chem-eb');
+		//cân bằng phương trình hóa học
+		if (contentMessage.indexOf(`${prefix}chemeb`) == 0) {
+			console.log = function() {};
+			const chemeb = require('chem-eb');
 			if (event.type == "message_reply") {
-				var eventContent = event.messageReply.body;
-				var balanced = balance(eventContent);
+				var msg = event.messageReply.body;
+				if (msg.includes('(') && msg.includes(')')) return api.sendMessage('Hiện tại không hỗ trợ phương trình tối giản. Hãy chuyển (XY)z về dạng XzYz.', threadID, messageID);
+				var balanced = chemeb(msg);
 				return api.sendMessage(`✅ ${balanced.outChem}`, threadID, messageID);
-			} else {
-				var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
-				var balanced = balance(content);
+			}
+			else {
+				var msg = contentMessage.slice(prefix.length + 7, contentMessage.length);
+				if (msg.includes('(') && msg.includes(')')) return api.sendMessage('Hiện tại không hỗ trợ phương trình tối giản. Hãy chuyển (XY)z về dạng XzYz.', threadID, messageID);
+				var balanced = chemeb(msg);
 				return api.sendMessage(`✅ ${balanced.outChem}`, threadID, messageID);
 			}
 		}
@@ -1138,84 +1312,192 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//porn pics
 		if (contentMessage.indexOf(`${prefix}porn`) == 0) {
-			const cheerio = require('cheerio');
-			const axios = require('axios');
-			const ffmpeg = require("fluent-ffmpeg");
-			const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-			ffmpeg.setFfmpegPath(ffmpegPath);
-			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
-			var album = {
-				'boobs': "15467902",
-				'cum': "1036491",
-				'bj': "28207541",
-				'feet': "852341",
-				'ass': "2830292",
-				'sex': "29916621",
-				'pussy': "2192882",
-				'teen': "21506052",
-				'bdsm': "17510771",
-				'asian': "9057591",
-				'pornstar': "20404671",
-				'gay': "19446301"
-			};
-			if (!content || !album.hasOwnProperty(content)) {
-				let allTags = [];
-				Object.keys(album).forEach((item) => allTags.push(item));
-				var pornTags = allTags.join(', ');
-				return api.sendMessage("Tất cả tag là:\n" + pornTags, threadID, messageID);
-			}
-			axios.get(`https://www.pornhub.com/album/${album[content]}`).then((response) => {
-				if (response.status == 200) {
-					const html = response.data;
-					const $ = cheerio.load(html);
-					var result = [];
-					let list = $('ul.photosAlbumsListing li.photoAlbumListContainer div.photoAlbumListBlock');
-					list.map(idx => {
-						let item = list.eq(idx);
-						if (!item.length) return;
-						let photo = `${item.find('a').attr('href')}`;
-						result.push(photo);
-					});
-					let getURL = "https://www.pornhub.com" + result[Math.floor(Math.random() * result.length)];
-					axios.get(getURL).then((response) => {
-						if (response.status == 200) {
-							const html = response.data;
-							const $ = cheerio.load(html);
-							if (content == 'sex') {
-								let video = $('video.centerImageVid');
-								let mp4URL = video.find('source').attr('src');
-								let ext = mp4URL.substring(mp4URL.lastIndexOf('.') + 1);
-								request(mp4URL).pipe(fs.createWriteStream(__dirname + `/src/porn.${ext}`)).on('close', () => {
-									ffmpeg().input(__dirname + `/src/porn.${ext}`).toFormat("gif").pipe(fs.createWriteStream(__dirname + "/src/porn.gif")).on("close", () => {
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			return economy.pornUseLeft(senderID).then(useLeft => {
+				if (useLeft == 0) return api.sendMessage(`Bạn đã hết số lần dùng ${prefix}porn.\nHãy nâng cấp lên Hạng NSFW cao hơn hoặc chờ đến ngày mai.`, threadID, messageID);
+				const cheerio = require('cheerio');
+				const axios = require('axios');
+				const ffmpeg = require("fluent-ffmpeg");
+				const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+				ffmpeg.setFfmpegPath(ffmpegPath);
+				var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
+				var album = {
+					'asian': "9057591",
+					'ass': "2830292",
+					'bdsm': "17510771",
+					'bj': "3478991",
+					'boobs': "15467902",
+					'cum': "1036491",
+					'feet': "852341",
+					'gay': "19446301",
+					'pornstar': "20404671",
+					'pussy': "1940602",
+					'sex': "2132332",
+					'teen': "17887331"
+				};
+				if (!content || !album.hasOwnProperty(content)) {
+					let allTags = [];
+					Object.keys(album).forEach((item) => allTags.push(item));
+					var pornTags = allTags.join(', ');
+					return api.sendMessage('=== Tất cả các tag Porn ===\n' + pornTags, threadID, messageID);
+				}
+				axios.get(`https://www.pornhub.com/album/${album[content]}`).then((response) => {
+					if (useLeft != -1) economy.subtractPorn(senderID);
+					if (response.status == 200) {
+						const html = response.data;
+						const $ = cheerio.load(html);
+						var result = [];
+						let list = $('ul.photosAlbumsListing li.photoAlbumListContainer div.photoAlbumListBlock');
+						list.map(index => {
+							let item = list.eq(index);
+							if (!item.length) return;
+							let photo = `${item.find('a').attr('href')}`;
+							result.push(photo);
+						});
+						let getURL = "https://www.pornhub.com" + result[Math.floor(Math.random() * result.length)];
+						axios.get(getURL).then((response) => {
+							if (response.status == 200) {
+								const html = response.data;
+								const $ = cheerio.load(html);
+								if (content == 'sex') {
+									let video = $('video.centerImageVid');
+									let mp4URL = video.find('source').attr('src');
+									let ext = mp4URL.substring(mp4URL.lastIndexOf('.') + 1);
+									request(mp4URL).pipe(fs.createWriteStream(__dirname + `/src/porn.${ext}`)).on('close', () => {
+										ffmpeg().input(__dirname + `/src/porn.${ext}`).toFormat("gif").pipe(fs.createWriteStream(__dirname + "/src/porn.gif")).on("close", () => {
+											return api.sendMessage({
+												body: "",
+												attachment: fs.createReadStream(__dirname + `/src/porn.gif`)
+											}, threadID, () => {
+												fs.unlinkSync(__dirname + `/src/porn.gif`);
+												fs.unlinkSync(__dirname + `/src/porn.${ext}`);
+											}, messageID);
+										});
+									});
+								}
+								else {
+									let image = $('div#photoWrapper');
+									let imgURL = image.find('img').attr('src');
+									let ext = imgURL.substring(imgURL.lastIndexOf('.') + 1);
+									request(imgURL).pipe(fs.createWriteStream(__dirname + `/src/porn.${ext}`)).on('close', () => {
 										return api.sendMessage({
 											body: "",
-											attachment: fs.createReadStream(__dirname + `/src/porn.gif`)
-										}, threadID, () => {
-											fs.unlinkSync(__dirname + `/src/porn.gif`);
-											fs.unlinkSync(__dirname + `/src/porn.${ext}`);
-										}, messageID);
+											attachment: fs.createReadStream(__dirname + `/src/porn.${ext}`)
+										}, threadID, () => fs.unlinkSync(__dirname + `/src/porn.${ext}`), messageID);
 									});
-								});
+								}
 							}
-							else {
-								let image = $('div#photoWrapper');
-								let imgURL = image.find('img').attr('src');
-								let ext = imgURL.substring(imgURL.lastIndexOf('.') + 1);
-								request(imgURL).pipe(fs.createWriteStream(__dirname + `/src/porn.${ext}`)).on('close', () => {
-									return api.sendMessage({
-										body: "",
-										attachment: fs.createReadStream(__dirname + `/src/porn.${ext}`)
-									}, threadID, () => fs.unlinkSync(__dirname + `/src/porn.${ext}`), messageID);
-								});
-							}
-						}
-					}, (error) => console.log(error));
+						}, (error) => console.log(error));
+					}
+					else return api.sendMessage("Đã xảy ra lỗi!", threadID, messageID);
+				}, (error) => console.log(error));
+			});
+		}
+
+		//hentai
+		if (contentMessage.indexOf(`${prefix}hentai`) == 0) {
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			return economy.hentaiUseLeft(senderID).then(useLeft => {
+				if (useLeft == 0) return api.sendMessage(`Bạn đã hết số lần dùng ${prefix}hentai.\nHãy nâng cấp lên Hạng NSFW cao hơn hoặc chờ đến ngày mai.`, threadID, messageID);
+				var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
+				var jsonData = fs.readFileSync(__dirname + "/src/anime.json");
+				var data = JSON.parse(jsonData).nsfw;
+				if (!content || !data.hasOwnProperty(content)) {
+					let nsfwList = [];
+					Object.keys(data).forEach(endpoint => nsfwList.push(endpoint));
+					let nsfwTags = nsfwList.join(', ');
+					return api.sendMessage('=== Tất cả các tag Hentai ===\n' + nsfwTags, threadID, messageID);
 				}
-				else return api.sendMessage("Đã xảy ra lỗi!", threadID, messageID);
-			}, (error) => console.log(error));
+				request(data[content], (error, response, body) => {
+					if (useLeft != -1) economy.subtractHentai(senderID);
+					let picData = JSON.parse(body);
+					let getURL = picData.url;
+					let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
+					let callback = function() {
+						api.sendMessage({
+							body: "",
+							attachment: fs.createReadStream(__dirname + `/src/hentai.${ext}`)
+						}, threadID, () => fs.unlinkSync(__dirname + `/src/hentai.${ext}`), messageID);
+					};
+					request(getURL).pipe(fs.createWriteStream(__dirname + `/src/hentai.${ext}`)).on("close", callback);
+				});
+			});
+		}
+
+		//get nsfw tier
+		if (contentMessage == `${prefix}mynsfw`) {
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			(async () => {
+				let tier = await economy.getNSFW(senderID);
+				let hentai = await economy.hentaiUseLeft(senderID);
+				let porn = await economy.pornUseLeft(senderID);
+				if (tier == -1) api.sendMessage('Bạn đang ở God Mode.\nBạn sẽ không bị giới hạn số lần dùng lệnh NSFW.', threadID, messageID);
+				else api.sendMessage(`Hạng NSFW của bạn là ${tier}.\nSố lần sử dụng ${prefix}porn còn lại: ${porn}.\nSố lần sử dụng ${prefix}hentai còn lại: ${hentai}.`, threadID, messageID);
+			})();
 			return;
 		}
-		
+
+		//buy nsfw tier
+		if (contentMessage == `${prefix}buynsfw`) {
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			(async () => {
+				let tier = await economy.getNSFW(senderID);
+				if (tier == -1) api.sendMessage('Bạn đang ở God Mode nên sẽ không thể mua.', threadID, messageID);
+				else {
+					let buy = await economy.buyNSFW(senderID);
+					if (buy == false) api.sendMessage('Đã có lỗi xảy ra!', threadID, messageID);
+					else api.sendMessage(buy.toString(), threadID, messageID);
+				}
+			})();
+			return;
+		}
+
+		//set nsfw tier
+		if (contentMessage.indexOf(`${prefix}setnsfw`) == 0 && admins.includes(senderID)) {
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			var mention = Object.keys(event.mentions)[0];
+			var content = contentMessage.slice(prefix.length + 8,contentMessage.length);
+			var sender = content.slice(0, content.lastIndexOf(" "));
+			var tierSet = content.substring(content.lastIndexOf(" ") + 1);
+			return economy.getMoney(senderID).then((moneydb) => {
+				if (isNaN(tierSet)) return api.sendMessage('Số hạng NSFW cần set của bạn không phải là 1 con số!', threadID, messageID);
+				if (tierSet > 5 || tierSet < -1) return api.sendMessage('Hạng NSFW không được dưới -1 và vượt quá 5', threadID, messageID);
+				if (tierSet == -1 && nsfwGodMode == false) return api.sendMessage('Bạn chưa bật NSFW God Mode trong config.', threadID, messageID);
+				if (!mention && sender == 'me' && tierSet != -1) return api.sendMessage("Đã sửa hạng NSFW của bản thân thành " + tierSet, threadID, () => economy.setNSFW(senderID, parseInt(tierSet)), messageID);
+				if (!mention && sender == 'me' && tierSet == -1) return api.sendMessage("Đã bật God Mode cho bản thân!\nBạn sẽ không bị trừ số lần sử dụng lệnh NSFW.", threadID, () => economy.setNSFW(senderID, parseInt(tierSet)), messageID);
+				if (sender != 'me' && tierSet != -1)
+					api.sendMessage(
+						{
+							body: `Bạn đã sửa hạng NSFW của ${event.mentions[mention].replace("@", "")} thành ${tierSet}.`,
+							mentions: [
+								{
+									tag: event.mentions[mention].replace("@", ""),
+									id: mention
+								}
+							]
+						},
+						threadID,
+						() => economy.setNSFW(mention, parseInt(tierSet)),
+						messageID
+					);
+				if (senderID != 'me' && tierSet == -1)
+					api.sendMessage(
+						{
+							body: `Bạn đã bật God Mode cho ${event.mentions[mention].replace("@", "")}!\nGiờ người này có thể dùng lệnh NSFW mà không bị giới hạn!`,
+							mentions: [
+								{
+									tag: event.mentions[mention].replace("@", ""),
+									id: mention
+								}
+							]
+						},
+						threadID,
+						() => economy.setNSFW(mention, parseInt(tierSet)),
+						messageID
+					);
+			});
+		}
+
 		/* ==================== Economy and Minigame Commands ==================== */
 
 		//coinflip
@@ -1247,6 +1529,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				});
 		}
 
+		//daily gift
 		if (contentMessage.indexOf(`${prefix}daily`) == 0) {
 			let cooldown = 8.64e7; //86400000
 			economy.getDailyTime(senderID).then((lastDaily) => {
@@ -1265,7 +1548,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						"Bạn đã nhận phần thưởng của ngày hôm nay. Cố gắng lên nhé <3",
 						threadID,
 						() => {
-							economy.updateMoney(senderID, 200);
+							economy.addMoney(senderID, 200);
 							economy.updateDailyTime(senderID, Date.now());
 							modules.log("User: " + senderID + " nhận daily thành công!");
 						},
@@ -1277,8 +1560,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		if (contentMessage == `${prefix}work`) {
-			let cooldown = 1200000;
-			economy.getWorkTime(senderID).then((lastWork) => {
+			return economy.getWorkTime(senderID).then((lastWork) => {
+				let cooldown = 1200000;
 				if (lastWork !== null && cooldown - (Date.now() - lastWork) > 0) {
 					let time = ms(cooldown - (Date.now() - lastWork));
 					api.sendMessage(
@@ -1307,14 +1590,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						"bán hoa",
 						"tìm jav/hentai code cho SpermLord"
 					];
-					let result = Math.floor(Math.random() * job.length);
 					let amount = Math.floor(Math.random() * 400);
 					api.sendMessage(
-						"Bạn đã làm công việc " + job[result] +
+						"Bạn đã làm công việc " + job[Math.floor(Math.random() * job.length)] +
 						" và đã nhận được số tiền là: " + amount + " đô",
 						threadID,
 						() => {
-							economy.updateMoney(senderID, amount);
+							economy.addMoney(senderID, parseInt(amount));
 							economy.updateWorkTime(senderID, Date.now());
 							modules.log("User: " + senderID + " nhận job thành công!");
 						},
@@ -1322,9 +1604,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					);
 				}
 			});
-			return;
 		}
 
+		//roulette
 		if (contentMessage.indexOf(`${prefix}roul`) == 0) {
 			economy.getMoney(senderID).then((moneydb) => {
 				var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
@@ -1351,27 +1633,27 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				else if (!isOdd(random)) api.sendMessage("Màu 🖤", threadID, messageID);
 				if (random == 0 && color == 2) {
 					money *= 15;
-					api.sendMessage(`Bạn đã chọn màu 💚, bạn đã thắng với số tiền được nhân lên 15: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.updateMoney(senderID, money), messageID);
+					api.sendMessage(`Bạn đã chọn màu 💚, bạn đã thắng với số tiền được nhân lên 15: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.addMoney(senderID, parseInt(money)), messageID);
 					modules.log(`${senderID} Won ${money} on green`);
 				}
 				else if (isOdd(random) && color == 1) {
-					money = parseInt(money * 1.5);
-					api.sendMessage(`Bạn đã chọn màu ❤️, bạn đã thắng với số tiền nhân lên 1.5: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.updateMoney(senderID, money), messageID);
+					money *= 1.5;
+					api.sendMessage(`Bạn đã chọn màu ❤️, bạn đã thắng với số tiền nhân lên 1.5: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.addMoney(senderID, parseInt(money)), messageID);
 					modules.log(`${senderID} Won ${money} on red`);
 				}
 				else if (!isOdd(random) && color == 0) {
-					money = parseInt(money * 2);
-					api.sendMessage(`Bạn đã chọn màu 🖤️, bạn đã thắng với số tiền nhân lên 2: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.updateMoney(senderID, money), messageID);
+					money *= 2;
+					api.sendMessage(`Bạn đã chọn màu 🖤️, bạn đã thắng với số tiền nhân lên 2: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.addMoney(senderID, parseInt(money)), messageID);
 					modules.log(`${senderID} Won ${money} on black`);
 				}
-				else api.sendMessage(`Bạn đã ra đê ở và mất trắng số tiền: ${money} đô. Số tiền hiện tại bạn có: ${moneydb}`, threadID, () => economy.subtractMoney(senderID, money), messageID);
+				else api.sendMessage(`Bạn đã ra đê ở và mất trắng số tiền: ${money} đô. Số tiền hiện tại bạn có: ${moneydb}`, threadID, () => economy.subtractMoney(senderID, parseInt(money)), messageID);
 			});
 			return;
 		}
 
 		//slot
 		if (contentMessage.indexOf(`${prefix}sl`) == 0) {
-			const slotItems = ["🍇", "🍉", "🍊", "🍏", "7⃣", "🍓", "🍒"];
+			const slotItems = ["🍇", "🍉", "🍊", "🍏", "7⃣", "🍓", "🍒", "🍌", "🥝", "🥑", "🌽"];
 			economy.getMoney(senderID).then((moneydb) => {
 				var content = contentMessage.slice(prefix.length + 3, contentMessage.length);
 				if (!content) return api.sendMessage(`Bạn chưa nhập thông tin đặt cược!`, threadID, messageID);
@@ -1382,7 +1664,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				if (!money) return api.sendMessage("Chưa nhập số tiền đặt cược!", threadID, messageID);
 				if (money > moneydb) return api.sendMessage(`Số tiền của bạn không đủ`, threadID, messageID);
 				if (money < 50) return api.sendMessage(`Số tiền đặt cược của bạn quá nhỏ, tối thiểu là 50 đô!`, threadID, messageID);
-
 				let number = [];
 				for (i = 0; i < 3; i++) number[i] = Math.floor(Math.random() * slotItems.length);
 				if (number[0] == number[1] && number[1] == number[2]) {
@@ -1393,13 +1674,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					money *= 2;
 					win = true;
 				}
-				if (win) api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thắng, toàn bộ ${money} đô thuộc về bạn. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.updateMoney(senderID, money), messageID);
-				else api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thua, toàn bộ ${money} đô bay vào không trung xD. Số tiền hiện tại bạn có: ${moneydb - money}`, threadID, () => economy.subtractMoney(senderID, money), messageID);
+				if (win) api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thắng, toàn bộ ${money} đô thuộc về bạn. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.addMoney(senderID, parseInt(money)), messageID);
+				else api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thua, toàn bộ ${money} đô bay vào không trung xD. Số tiền hiện tại bạn có: ${moneydb - money}`, threadID, () => economy.subtractMoney(senderID, parseInt(money)), messageID);
 			});
 			return;
 		}
 
-		//pay command
+		//pay
 		if (contentMessage.indexOf(`${prefix}pay`) == 0) {
 			var mention = Object.keys(event.mentions)[0];
 			var content = contentMessage.slice(prefix.length + 4,contentMessage.length);
@@ -1421,7 +1702,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					},
 					threadID,
 					() => {
-						economy.updateMoney(mention, parseInt(moneyPay));
+						economy.addMoney(mention, parseInt(moneyPay));
 						economy.subtractMoney(senderID, parseInt(moneyPay));
 					},
 					messageID
@@ -1430,31 +1711,28 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return;
 		}
 
-		//setmoney command
+		//setmoney
 		if (contentMessage.indexOf(`${prefix}setmoney`) == 0 && admins.includes(senderID)) {
 			var mention = Object.keys(event.mentions)[0];
 			var content = contentMessage.slice(prefix.length + 9,contentMessage.length);
 			var sender = content.slice(0, content.lastIndexOf(" "));
 			var moneySet = content.substring(content.lastIndexOf(" ") + 1);
-			economy.getMoney(senderID).then((moneydb) => {
-				if (isNaN(moneySet)) return api.sendMessage('Số tiền cần set của bạn không phải là 1 con số!', threadID, messageID);
-				if (moneydb == undefined) return api.sendMessage('User cần set chưa tồn tại trên hệ thống dữ liệu!', threadID, messageID);
-				if (!mention && sender == 'me') return api.sendMessage("Đã sửa tiền của bản thân thành " + moneySet, threadID, () => economy.setMoney(senderID, parseInt(moneyPay)), messageID);
-				api.sendMessage(
-					{
-						body: `Bạn đã sửa tiền của ${event.mentions[mention].replace("@", "")} thành ${moneySet} đô.`,
-						mentions: [
-							{
-								tag: event.mentions[mention].replace("@", ""),
-								id: mention
-							}
-						]
-					},
-					threadID,
-					() => economy.setMoney(mention, parseInt(moneySet)),
-					messageID
-				);
-			});
+			if (isNaN(moneySet)) return api.sendMessage('Số tiền cần set của bạn không phải là 1 con số!', threadID, messageID);
+			if (!mention && sender == 'me') return api.sendMessage("Đã sửa tiền của bản thân thành " + moneySet, threadID, () => economy.setMoney(senderID, parseInt(moneySet)), messageID);
+			api.sendMessage(
+				{
+					body: `Bạn đã sửa tiền của ${event.mentions[mention].replace("@", "")} thành ${moneySet} đô.`,
+					mentions: [
+						{
+							tag: event.mentions[mention].replace("@", ""),
+							id: mention
+						}
+					]
+				},
+				threadID,
+				() => economy.setMoney(mention, parseInt(moneySet)),
+				messageID
+			);
 			return;
 		}
 
@@ -1467,15 +1745,14 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			if (!content) return api.sendMessage(`Bạn chưa nhập thông tin cần thiết!`, threadID, messageID);
 			api.sendMessage("Đợi em một xíu...", threadID, messageID);
 			require("fb-video-downloader").getInfo(content).then(info => {
-				let gg = JSON.stringify(info, null, 2);
+				let gg = JSON.stringify(info);
 				let data = JSON.parse(gg);
-				let callback = function() {
+				media.facebookVideo(data.download.sd, () => {
 					api.sendMessage({
 						body: "",
 						attachment: fs.createReadStream(__dirname + "/src/video.mp4")
 					}, threadID, () => fs.unlinkSync(__dirname + "/src/video.mp4"));
-				};
-				media.facebookVideo(data.download.sd, callback);
+				});
 			});
 			return;
 		}
@@ -1517,13 +1794,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					if (err) return api.sendMessage('Link youtube không hợp lệ!', threadID, messageID);
 					if (info.length_seconds > 360) return api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID);
 					api.sendMessage("Đợi em một xíu em đang xử lý...", threadID, messageID);
-					let callback = function() {
+					media.youtubeVideo(content, () => {
 						api.sendMessage({
 							body: "",
 							attachment: fs.createReadStream(__dirname + "/src/video.mp4")
 						}, threadID, () => fs.unlinkSync(__dirname + "/src/video.mp4"));
-					};
-					media.youtubeVideo(content, callback);
+					});
 				});
 			};
 			return;
@@ -1567,13 +1843,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					if (err) return api.sendMessage('Link youtube không hợp lệ!', threadID, messageID);
 					if (info.length_seconds > 360) return api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID);
 					api.sendMessage("Đợi em một xíu em đang xử lý...", threadID, messageID);
-					let callback = function() {
+					media.youtubeMusic(content, () => {
 						api.sendMessage({
 							body: "",
 							attachment: fs.createReadStream(__dirname + "/src/music.mp3")
 						}, threadID, () => fs.unlinkSync(__dirname + "/src/music.mp3"));
-					};
-					media.youtubeMusic(content, callback);
+					});
 				});
 			};
 			return;
@@ -1583,22 +1858,14 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}anime`) == 0) {
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
 			var jsonData = fs.readFileSync(__dirname + "/src/anime.json");
-			var data = JSON.parse(jsonData);
-
-			var url;
-			if (data.sfw.hasOwnProperty(content)) url = data.sfw[content];
-			else if (data.nsfw.hasOwnProperty(content)) url = data.nsfw[content];
-			else if (!content || !data.nsfw.hasOwnProperty(content) || !data.sfw.hasOwnProperty(content)) {
+			var data = JSON.parse(jsonData).sfw;
+			if (!content || !data.hasOwnProperty(content)) {
 				let sfwList = [];
-				let nsfwList = [];
-				Object.keys(data.sfw).forEach(endpoint => sfwList.push(endpoint));
-				Object.keys(data.nsfw).forEach(endpoint => nsfwList.push(endpoint));
+				Object.keys(data).forEach(endpoint => sfwList.push(endpoint));
 				let sfwTags = sfwList.join(', ');
-				let nsfwTags = nsfwList.join(', ');
-				return api.sendMessage(`=== Tất cả các tag SFW ===\n` + sfwTags + `\n\n=== Tất cả các tag NSFW ===\n` + nsfwTags, threadID, messageID);
+				return api.sendMessage(`=== Tất cả các tag Anime ===\n` + sfwTags, threadID, messageID);
 			}
-
-			return request(url, (error, response, body) => {
+			return request(data[content], (error, response, body) => {
 				let picData = JSON.parse(body);
 				let getURL = picData.url;
 				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
@@ -1633,7 +1900,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
 			if (content.length == -1) return api.sendMessage(`Bạn đã nhập sai format, vui lòng ${prefix}help gif để biết thêm chi tiết!`, threadID, messageID);
 			if (content.indexOf(`cat`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=cat&limit=1`, (err, response, body) => {
+				return request(`https://api.tenor.com/v1/random?key=${tenor}&q=cat&limit=1`, (err, response, body) => {
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
@@ -1646,11 +1913,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + `/src/randompic.gif`)).on("close", callback);
 				});
-				return;
 			}
-
-			else if (content.indexOf(`dog`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=dog&limit=1`, (err, response, body) => {
+			else if (content.indexOf(`dog`) == 0) {
+				return request(`https://api.tenor.com/v1/random?key=${tenor}&q=dog&limit=1`, (err, response, body) => {
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
@@ -1662,11 +1927,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
 				});
-				return;
 			}
-
-			else if (content.indexOf(`capoo`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=capoo&limit=1`, (err, response, body) => {
+			else if (content.indexOf(`capoo`) == 0) {
+				return request(`https://api.tenor.com/v1/random?key=${tenor}&q=capoo&limit=1`, (err, response, body) => {
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
@@ -1678,11 +1941,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
 				});
-				return;
 			}
-
-			else if (content.indexOf(`mixi`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=mixigaming&limit=1`, (err, response, body) => {
+			else if (content.indexOf(`mixi`) == 0) {
+				return request(`https://api.tenor.com/v1/random?key=${tenor}&q=mixigaming&limit=1`, (err, response, body) => {
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
@@ -1694,11 +1955,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
 				});
-				return;
 			}
-
-			else if (content.indexOf(`bomman`) !== -1) {
-				request(`https://api.tenor.com/v1/random?key=${tenor}&q=bommanrage&limit=1`, (err, response, body) => {
+			else if (content.indexOf(`bomman`) == 0) {
+				return request(`https://api.tenor.com/v1/random?key=${tenor}&q=bommanrage&limit=1`, (err, response, body) => {
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
@@ -1710,7 +1969,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
 				});
-				return;
 			}
 			else return api.sendMessage(`Tag của bạn nhập không tồn tại, vui lòng đọc hướng dẫn sử dụng trong ${prefix}help gif`, threadID, messageID);
 		}
@@ -1784,7 +2042,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//saucenao
 		if (contentMessage.indexOf(`${prefix}saucenao`) == 0) {
 			if (event.type != "message_reply") return api.sendMessage(`Vui lòng bạn reply bức ảnh cần phải tìm!`, threadID, messageID);
-			var BaseJson = event.messageReply.attachments;
 			if (event.messageReply.attachments.length > 1) return api.sendMessage(`Vui lòng reply chỉ một ảnh!`, threadID, messageID);
 			if (event.messageReply.attachments[0].type == 'photo') {
 				if (saucenao == '' || typeof saucenao == undefined) return api.sendMessage(`Chưa có api của saucenao!`, threadID, messageID);
@@ -1793,7 +2050,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				search = new sagiri(saucenao, {
 					numRes: 1
 				});
-				search.getSauce(imgURL).then(response => {
+				return search.getSauce(imgURL).then(response => {
 					let data = response[0];
 					let results = {
 						thumbnail: data.original.header.thumbnail,
@@ -1807,28 +2064,35 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					const minSimilarity = 30;
 					if (minSimilarity <= ~~results.similarity) {
 						api.sendMessage(
-						'Đây là kết quả tìm kiếm được\n' +
-						'-------------------------\n' +
-						'- Độ tương tự: ' + results.similarity + '%\n' +
-						'- Material: ' + results.material + '\n' +
-						'- Characters: ' + results.characters + '\n' +
-						'- Creator: ' + results.creator + '\n' +
-						'- Original site: ' + results.site + ' - ' + results.url, threadID, messageID);
+							'Đây là kết quả tìm kiếm được\n' +
+							'-------------------------\n' +
+							'- Độ tương tự: ' + results.similarity + '%\n' +
+							'- Material: ' + results.material + '\n' +
+							'- Characters: ' + results.characters + '\n' +
+							'- Creator: ' + results.creator + '\n' +
+							'- Original site: ' + results.site + ' - ' + results.url,
+							threadID, messageID
+						);
 					} else api.sendMessage(`Không thấy kết quả nào trùng với ảnh bạn đang tìm kiếm :'(`, threadID, messageID);
 				});
 			}
-			return;
 		}
 
 		//Check if command is correct
 		if (contentMessage.indexOf(prefix) == 0) {
 			var findSpace = contentMessage.indexOf(' ');
 			var checkCmd;
-			if (findSpace == -1) checkCmd = stringSimilarity.findBestMatch(contentMessage.slice(prefix.length, contentMessage.length), nocmdData.cmds);
-			else checkCmd = stringSimilarity.findBestMatch(contentMessage.slice(prefix.length, findSpace), nocmdData.cmds);
+			if (findSpace == -1) {
+				checkCmd = stringSimilarity.findBestMatch(contentMessage.slice(prefix.length, contentMessage.length), nocmdData.cmds);
+				if (checkCmd.bestMatch.target == contentMessage.slice(prefix.length, contentMessage.length)) return;
+			}
+			else {
+				checkCmd = stringSimilarity.findBestMatch(contentMessage.slice(prefix.length, findSpace), nocmdData.cmds);
+				if (checkCmd.bestMatch.target == contentMessage.slice(prefix.length, findSpace)) return;
+			}
 			if (checkCmd.bestMatch.rating == 0 || checkCmd.bestMatch.rating < 0.3) return;
 			return api.sendMessage(`Ý bạn là lệnh "${prefix + checkCmd.bestMatch.target}" phải không?`, threadID, messageID);
 		}
-	};
-};
-/* This bot was made by Catalizcs(roxtigger2003) and SpermLord(spermlord) with love <3, pls dont delete this credits! THANKS very much */
+	}
+}
+/* This bot was made by Catalizcs(roxtigger2003) and SpermLord(spermlord) with love <3, pls dont delete this credits! THANKS */

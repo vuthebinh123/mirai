@@ -9,29 +9,41 @@ module.exports = function ({ sequelize, Sequelize }) {
 			type: Sequelize.BIGINT,
 			unique: true
 		},
+		info: {
+			type: Sequelize.JSON
+		},
 		point: {
 			type: Sequelize.BIGINT,
 			defaultValue: 0
 		},
-		info: {
-			type: Sequelize.JSON
+		money: {
+			type: Sequelize.BIGINT,
+			defaultValue: 0
+		},
+		nsfwTier: {
+			type: Sequelize.INTEGER,
+			defaultValue: 0
 		},
 		block: {
 			type: Sequelize.BOOLEAN,
 			defaultValue: false
 		},
-		economy: {
+		dailytime: {
 			type: Sequelize.BIGINT,
 			defaultValue: 0
 		},
-		dailytime: {
-			type: Sequelize.BIGINT,
-			unique: true
-		},
 		worktime: {
 			type: Sequelize.BIGINT,
-			unique: true
+			defaultValue: 0
 		},
+		pornLeft: {
+			type: Sequelize.INTEGER,
+			defaultValue: 1
+		},
+		hentaiLeft: {
+			type: Sequelize.INTEGER,
+			defaultValue: 2
+		}
 	});
 	return User;
 }

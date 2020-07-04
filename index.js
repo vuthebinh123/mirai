@@ -3,23 +3,23 @@ const login = require("./app/login");
 const { Sequelize, sequelize, Op } = require("./database");
 const logger = require("./app/modules/log.js");
 const { appStateFile } = require("./config");
-const fs = require("fs");
+const fs = require("fs-extra");
 const express = require("express");
 const app = express();
 const cmd = require('node-cmd');
-const request = require("request");
 const __GLOBAL = new Object({
 	threadBlocked: new Array(),
 	userBlocked: new Array(),
 	unsend: new Array(),
-	resendBlocked: new Array()
+	resendBlocked: new Array(),
+	NSFWBlocked: new Array()
 });
 
 app.get("/", (request, response) => response.sendFile(__dirname + "/view/index.html"));
 app.get("/dbv", (request, response) => response.sendFile(__dirname + "/config/dbviewer/index.html"));
 app.use(express.static(__dirname + '/config'));
 app.use(express.static(__dirname + '/config/dbviewer'));
-const listener = app.listen(process.env.PORT, () => console.log("Đã mở tại port: " + listener.address().port));
+const listener = app.listen(process.env.PORT, () => logger("Đã mở tại port: " + listener.address().port), 0);
 
 setTimeout(() => {
 	console.log("refreshing!");

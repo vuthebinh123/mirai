@@ -9,16 +9,20 @@ module.exports = function ({ sequelize, Sequelize }) {
 			type: Sequelize.BIGINT,
 			unique: true
 		},
+		name: {
+			type: Sequelize.STRING
+		},
 		block: {
+			type: Sequelize.BOOLEAN,
+			defaultValue: false
+		},
+		blockNSFW: {
 			type: Sequelize.BOOLEAN,
 			defaultValue: false
 		},
 		blockResend: {
 			type: Sequelize.BOOLEAN,
 			defaultValue: false
-		},
-		name: {
-			type: Sequelize.STRING
 		}
 	})
 	return Thread;

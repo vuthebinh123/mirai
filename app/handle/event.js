@@ -1,4 +1,4 @@
-const fs = require("fs");
+const fs = require("fs-extra");
 module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 	return function ({ event }) {
 		switch (event.logMessageType) {

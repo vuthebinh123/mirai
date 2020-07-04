@@ -1,4 +1,4 @@
-const fs = require("fs");
+const fs = require("fs-extra");
 const login = require("fca-unofficial");
 const readline = require("readline");
 const { mailFB, passFB } = require("./config");
@@ -16,8 +16,8 @@ const option = {
 
 //Hãy điền tài khoản và mật khẩu vào file .env sau khi đã đổi .env.example thành .env
 const obj = {
-	email: mailFB,
-	password: passFB
+	email: process.env.EMAIL,
+	password: process.env.PASSWORD
 };
 login(obj, option, (err, api) => {
 	if (err) {

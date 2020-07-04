@@ -9,7 +9,7 @@
 	{
 		"name":"mirai",
 		"decs":"Gọi mirai",
-		"usage":"mirai hoặc mirai",
+		"usage":"mirai",
 		"example":"!mirai",
 		"group":"general"
 	},
@@ -22,37 +22,37 @@
 	},
 	{
 		"name":"hug",
-		"decs":"ôm người bạn tag",
+		"decs":"Ôm người bạn tag",
 		"usage":"hug [tag người bạn cần ôm]",
 		"example":"hug @Mirai-Chan",
 		"group":"general"
 	},
 	{
 		"name":"kiss",
-		"decs":"hôn người bạn tag",
+		"decs":"Hôn người bạn tag",
 		"usage":"kiss [tag người bạn cần hôn]",
 		"example":"kiss @Mirai-Chan",
 		"group":"general"
 	},
 	{
 		"name":"slap",
-		"decs":"tán sml người bạn tag",
-		"usage":"slap [tag người bạn cần hôn]",
+		"decs":"Tát người bạn tag",
+		"usage":"slap [tag người bạn cần tát]",
 		"example":"slap @Mirai-Chan",
 		"group":"general"
 	},
 	{
 		"name":"mlem",
-		"decs":"( ͡°👅 ͡°) ",
+		"decs":"( ͡°👅 ͡°)",
 		"usage":"mlem",
 		"example":"mlem",
 		"group":"general"
 	},
 	{
-		"name":"care",
+		"name":"idk",
 		"decs":"¯\\_(ツ)_/¯ ",
-		"usage":"care",
-		"example":"care",
+		"usage":"idk",
+		"example":"idk",
 		"group":"general"
 	},
 	{
@@ -64,8 +64,8 @@
 	},
 	{
 		"name":"wiki",
-		"decs":"tra khảo nội dung bạn cần tìm hiểu ",
-		"usage":"wiko [en] [nội dung cần tìm hiểu] nếu sử dụng tiếng Việt không cần nhập en",
+		"decs":"Tìm nội dung trên Wikipedia",
+		"usage":"wiki <en> [nội dung cần tìm hiểu] nếu sử dụng tiếng Việt không cần nhập en",
 		"example":"wiki loài chó",
 		"group":"general"
 	},
@@ -107,16 +107,16 @@
 	{
 		"name":"weather",
 		"decs":"Kiểm tra thời tiết hiện tại ở khu vực thành phố bạn nhập",
-		"usage":"weather [Thành phố hoặc quốc gia]",
+		"usage":"weather [thành phố]",
 		"example":"weather Thành Phố Hồ Chí Minh",
 		"group":"general"
 	},
 	{
 		"name":"waifu",
-		"decs":"Thử vận may với Mirai-Chan ",
+		"decs":"Thử vận may với Mirai-Chan",
 		"usage":"waifu",
 		"example":"waifu",
-		"group":"wibu"
+		"group":"general"
 	},
 	{
 		"name":"roll",
@@ -133,18 +133,18 @@
 		"group":"system"
 	},
 	{
-		"name":"anime tag",
-		"decs":"Lấy toàn bộ tag mà bạn có thể sử dụng",
-		"usage":"anime [sfw, nsfw]",
-		"example":"anime sfw",
-		"group":"wibu"
-	},
-	{
 		"name":"anime",
-		"decs":"Lấy random ảnh mà tag bạn đã chọn, để lấy hướng dẫn về lấy tag sử dụng help anime get tag",
+		"decs":"Lấy ảnh anime SFW",
 		"usage":"anime [tag]",
 		"example":"anime neko",
-		"group":"wibu"
+		"group":"general"
+	},
+	{
+		"name":"hentai",
+		"decs":"Lấy ảnh hentai NSFW",
+		"usage":"hentai [tag]",
+		"example":"hentai yuri",
+		"group":"nsfw"
 	},
 	{
 		"name":"randomcolor",
@@ -200,25 +200,25 @@
 		"decs":"Lấy code may mắn cho riêng bạn ( ͡° ͜ʖ ͡°)",
 		"usage":"nhentai -r",
 		"example":"nhentai -r",
-		"group":"wibu"
+		"group":"nsfw"
 	},
 	{
 		"name":"nhentai -i",
 		"decs":"Lấy thông tin chuyện của bạn ( ͡° ͜ʖ ͡°)",
 		"usage":"nhentai -i [id]",
 		"example":"nhentai -i 177013",
-		"group":"wibu"
+		"group":"nsfw"
 	},
 	{
 		"name":"hentaivn -i",
 		"decs":"Lấy thông tin chuyện của bạn ( ͡° ͜ʖ ͡°)",
 		"usage":"hentaivn -i [id]",
 		"example":"hentaivn -i 19945",
-		"group":"wibu"
+		"group":"nsfw"
 	},
 	{
 		"name":"porn",
-		"decs":"cái tên nói lên tất cả ( ͡° ͜ʖ ͡°)",
+		"decs":"Cái tên nói lên tất cả ( ͡° ͜ʖ ͡°)",
 		"usage":"porn [boobs, cum, bj, feet, ass, sex, pussy, teen, bdsm, asian, pornstar, gay(?)]",
 		"example":"porn boobs",
 		"group":"nsfw"
@@ -228,7 +228,7 @@
 		"decs":"Bảo bot có thể làm toán",
 		"usage":"math [phép toán]",
 		"example":"math 1+1",
-		"group":"Học Tập"
+		"group":"study"
 	},
 	{
 		"name":"giveaway",
@@ -274,77 +274,77 @@
 	},
 	{
 		"name":"uptime",
-		"decs":"xem thời gian hoạt động của bot",
+		"decs":"Xem thời gian hoạt động của bot",
 		"usage":"uptime",
 		"example":"uptime",
 		"group":"system"
 	},
 	{
 		"name":"gỡ",
-		"decs":"gỡ tin nhắn của bot",
+		"decs":"Gỡ tin nhắn của bot",
 		"usage":"phản hồi đoạn chat mà bot đã gửi và nhập gỡ",
 		"example":"gỡ",
 		"group":"general"
 	},
 	{
 		"name":"money",
-		"decs":"xem số tiền bạn đang có",
+		"decs":"Xem số tiền bạn đang có",
 		"usage":"money",
 		"example":"money",
 		"group":"economy"
 	},
 	{
 		"name":"daily",
-		"decs":"nhận phần thưởng hằng ngày",
+		"decs":"Nhận phần thưởng hằng ngày",
 		"usage":"daily",
 		"example":"daily",
 		"group":"economy"
 	},
 	{
 		"name":"work",
-		"decs":"có làm thì mới có ăn",
+		"decs":"Có làm thì mới có ăn",
 		"usage":"work",
 		"example":"work",
 		"group":"economy"
 	},
 	{
 		"name":"roul",
-		"decs":"chơi cò quay(roulette)",
+		"decs":"Chơi cò quay (roulette)",
 		"usage":"roul [red, green, black] [số tiền cần đặt]",
 		"example":"roul red 500",
 		"group":"economy"
 	},
 	{
 		"name":"coinflip",
-		"decs":"chơi trò tung đồng xu",
+		"decs":"Chơi trò tung đồng xu",
 		"usage":"coinflip",
 		"example":"coinflip",
 		"group":"economy"
 	},
 	{
 		"name":"pay",
-		"decs":"chuyển một số tiền cho người mà bạn tag",
+		"decs":"Chuyển một số tiền cho người mà bạn tag",
 		"usage":"pay [tag người nhận] [số tiền muốn chuyển]",
-		"example":"pay @Sumi-Chan 500",
+		"example":"pay @Mirai-Chan 500",
 		"group":"economy"
 	},
 	{
 		"name":"sl",
-		"decs":"đánh bạc bằng hình thức hoa quả",
+		"decs":"Đánh bạc bằng hình thức hoa quả",
 		"usage":"sl [số tiền bạn muốn cá cược]",
 		"example":"sl 500",
 		"group":"economy"
 	},
 	{
 		"name":"earth",
-		"decs":"xem hình ảnh trái đất gần đây nhất",
+		"decs":"Xem hình ảnh trái đất gần đây nhất",
 		"usage":"earth",
 		"example":"earth",
 		"group":"space"
 	},
 	{
 		"name":"iss",
-		"decs":"xem toạ độ mà tàu vũ trụ đang lưu lạc",
+		"decs":"Xem toạ độ mà tàu vũ trụ đang lưu lạc",
 		"usage":"iss",
 		"example":"iss",
 		"group":"space"
@@ -358,23 +358,16 @@
 	},
 	{
 		"name":"spacex",
-		"decs":"lấy thông tin đợt phóng mới nhất của SpaceX",
+		"decs":"Lấy thông tin đợt phóng mới nhất của SpaceX",
 		"usage":"spacex",
 		"example":"spacex",
 		"group":"space"
 	},
 	{
 		"name":"acronym",
-		"decs":"tìm kiếm kết quả từ từ viết tắt của bạn",
+		"decs":"Tìm kiếm kết quả từ từ viết tắt của bạn",
 		"usage":"acronym [từ viết tắt]",
 		"example":"acronym lol",
-		"group":"general"
-	},
-	{
-		"name":"count",
-		"decs":"Đếm số tin nhắn trong group",
-		"usage":"count",
-		"example":"count",
 		"group":"general"
 	},
 	{
@@ -393,30 +386,86 @@
 	},
 	{
 		"name":"sleep",
-		"decs":"Tính thời gian thức dậy hoàn hào cho bạn",
+		"decs":"Tính thời gian thức dậy hoàn hảo cho bạn",
 		"usage":"sleep [thời gian/để trống]",
 		"example":"sleep 22:00",
 		"group":"general"
 	},
 	{
 		"name":"wake",
-		"decs":"Tính thời gian đi ngủ hoàn hào cho bạn",
+		"decs":"Tính thời gian đi ngủ hoàn hảo cho bạn",
 		"usage":"wake [thời gian]",
 		"example":"wake 06:00",
 		"group":"general"
 	},
 	{
-		"name":"balance",
-		"decs":"Cân bằng phương trình hoá học một cách nhanh nhất có thể .-.",
-		"usage":"balance [Phương trình cần cân bằng]",
-		"example":"balance C38H76N2O2 + NaNO2 = Na2O + CO2 + H2O + N2",
-		"group":"Học Tập"
+		"name":"chemeb",
+		"decs":"Cân bằng phương trình hoá học",
+		"usage":"chemeb [Phương trình cần cân bằng]",
+		"example":"chemeb C38H76N2O2 + NaNO2 = Na2O + CO2 + H2O + N2",
+		"group":"study"
 	},
 	{
 		"name":"morse",
-		"decs":"Mã hoá những đoạn văn bản của bạn trở thành mã morse",
-		"usage":"morse [encode hoặc decode] [đoạn text cần mã hoá]",
+		"decs":"Mã hoá đoạn văn bản của bạn trở thành mã morse",
+		"usage":"morse [encode hoặc decode] [đoạn text ASCII cần mã hoá]",
 		"example":"morse encode hello cac ban",
 		"group":"cipher"
+	},
+	{
+		"name":"mynsfw",
+		"decs":"Xem hạng NSFW của bạn",
+		"usage":"mynsfw",
+		"example":"mynsfw",
+		"group":"nsfw"
+	},
+	{
+		"name":"buynsfw",
+		"decs":"Mua hạng NSFW theo từng bậc 1-2-3-4-5",
+		"usage":"buynsfw",
+		"example":"buynsfw",
+		"group":"nsfw"
+	},
+	{
+		"name":"setnsfw",
+		"decs":"Set hạng NSFW của 1 người",
+		"usage":"setnsfw [me/@tag] [hạng từ -1 (God Mode) -> 5]",
+		"example":"setnsfw @SpermLord -1",
+		"group":"nsfw"
+	},
+	{
+		"name":"nsfw",
+		"decs":"Bật/Tắt NSFW trong nhóm",
+		"usage":"nsfw [on/off]",
+		"example":"nsfw on",
+		"group":"system"
+	},
+	{
+		"name":"caesar",
+		"decs":"Mã hóa đoạn văn bản của bạn trở thành Mật Mã Caesar",
+		"usage":"caesar [encode/decode] [đoạn text cần mã hóa]",
+		"example":"caesar encode SpermLord",
+		"group":"cipher"
+	},
+	{
+		"name":"vigenere",
+		"decs":"Mã hóa đoạn văn bản của bạn trở thành Mật Mã Vigenere",
+		"usage":"vigenere [encode/decode] [đoạn text cần mã hóa]",
+		"example":"vigenere encode SpermLord",
+		"group":"cipher"
+	},
+	{
+		"name":"rot47",
+		"decs":"Mã hóa đoạn văn bản của bạn trở thành Mật Mã ROT47",
+		"usage":"rot47 [encode/decode] [đoạn text cần mã hóa]",
+		"example":"rot47 encode SpermLord",
+		"group":"cipher"
+	},
+	{
+		"name":"short",
+		"decs":"Tạo một phím tắt cho những thứ bạn nhập vào.",
+		"usage":"short [không điền/del/all] [input] => [output]",
+		"example":"short author => SpermLord & Catalizcs",
+		"group":"general"
 	}
 ]

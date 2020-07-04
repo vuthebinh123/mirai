@@ -2,6 +2,7 @@ const logger = require("../modules/log.js");
 module.exports = function({ models, api }) {
 	const User = models.use("user");
 	const FACTOR = 3;
+
 	function getPoint(uid) {
 		return User.findOne({
 			where: {
