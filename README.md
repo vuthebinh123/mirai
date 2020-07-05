@@ -81,4 +81,11 @@ Click this button:
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 License - see the [LICENSE](LICENSE) file for details
+This project is licensed under the GNU General Public License v3.0 License - see the [LICENSE](LICENSE) file 
+<details>
+	<summary></summary>
+
+  ```
+  địt con mẹ mày, đéo sài thì cút bố đéo cần mày sân si, con đĩ nứng lồn 👌
+  ```
+</details>

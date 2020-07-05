@@ -2091,7 +2091,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				if (checkCmd.bestMatch.target == contentMessage.slice(prefix.length, findSpace)) return;
 			}
 			if (checkCmd.bestMatch.rating == 0 || checkCmd.bestMatch.rating < 0.3) return;
-			return api.sendMessage(`Ý bạn là lệnh "${prefix + checkCmd.bestMatch.target}" phải không?`, threadID, messageID);
+			return api.sendMessage(`Lệnh bạn nhập không tồn tại \n\n Ý bạn là lệnh "${prefix + checkCmd.bestMatch.target}" phải không?`, threadID, messageID);
 		}
 	}
 }
