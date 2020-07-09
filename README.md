@@ -22,48 +22,34 @@
 Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành một con bot thông minh, nhanh nhẹn!
 
 ## Các thay đổi
-	- Thêm tính năng update (dùng 'node update' trong Terminal).
-	- Thêm 2 lệnh NSFW mới cho user (mynsfw, buynsfw)!
-		+ mynsfw - Xem hạng NSFW của bạn.
-		+ buynsfw - Nâng cấp hạng NSFW của bạn.
-		>> Bạn không nhìn nhầm đâu! Giờ NSFW sẽ mất phí! <<
-	- Thêm 2 lệnh NSFW mới cho admin (nsfw, setnsfw)!
-		+ nsfw - Bật/Tắt NSFW trong nhóm.
-		+ setnsfw - Đặt hạng NSFW cho user.
-	- Thêm các lệnh tạo mật mã (Morse, Caesar, Vigenere, ROT47)!
-	- Thêm lệnh tạo shortcut cho bot (Xem trong help short)!
-	- Thêm 4 quả mới vào sl (🍌, 🥝, 🥑, 🌽)!
-	- Sửa tính năng tìm lệnh đúng.
-	- Sửa lỗi "setmoney me".
-	- Sửa lỗi "help" khi nhập lệnh không tồn tại.
-	- Đổi balance (cân bằng phương trình) thành chemeb.
-	- Đổi onResend/offResend thành unblockResend/blockResend.
-	- Tách anime (sfw/nsfw) ra thành anime (sfw) và hentai (nsfw).
-	- Làm mới lại 1 số album trong porn.
-	- Xóa count (2 bot cho 2 kết quả khác nhau).
+	- Viết lại chức năng chào khi có User vào group.
+	- Loại bỏ một số code thừa.
 
-# Installation 
+# Installation
 
 ## Yêu cầu:
   - [NodeJS](https://nodejs.org/en/) và git(không bắt buộc)
   - Trình độ sử dụng NodeJS ở mức trung bình
   - Một tài khoản Facebook dùng để làm bot
  
-## Cài đặt (Linux/macOS/WSL/Windows đã cài windows-build-tools):  
+## Cài đặt (Linux/macOS/WSL/Windows đã cài windows-build-tools):
 + Step 1: Clone hoặc download project, nếu máy bạn có git hãy sử dụng lệnh:
 ```bash
 git clone https://github.com/roxtigger2003/mirai
 ```
 + Step 2: Trỏ và bắt đầu cài đặt các gói module cần thiết cho bot cũng như file env:
 ```bash
-cd mirai && npm install && mv -f .env.example .env
+cd mirai && mv -f .env.example .env && npm install
 ```
 sau khi xong các dòng lệnh trên bạn hãy mở file env và edit nó
 + Step 3: Login vào tài khoản Facebook của bạn qua email và password trong file .env (nếu bạn có bật xác thực 2 bước, hãy nhanh tay gõ mã xác thực trong vòng 5s):
 ```bash
 node login.js
 ```
-+ Step 4: Dùng bot thôi chứ còn chờ gì nữa záo xư?
++ Step 4: Nhập lệnh này nếu bạn không dùng bot trên Glitch:
+```bash
+npm start
+```
 
 ## Video hướng dẫn deploy và sử dụng trên Glitch:
 [![Tutorial](https://img.youtube.com/vi/wbfAxyV4n_o/0.jpg)](https://www.youtube.com/watch?v=wbfAxyV4n_o)

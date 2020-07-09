@@ -1,7 +1,7 @@
 {
   "name": "ProjectMirai",
-  "version": "4.0.0",
-  "description": "Project Mirai sẽ biến tài khoản Facebook của bạn trở thành một con bot thú vị ;)",
+  "version": "4.1.0",
+  "description": "Project Mirai sẽ biến tài khoản Facebook của bạn trở thành một con bot thú vị.",
   "main": "index.js",
   "scripts": {
     "start": "pm2 start app.config.js --no-daemon"

@@ -1,7 +1,6 @@
 const fs = require("fs-extra");
 const login = require("facebook-chat-api");
 const readline = require("readline");
-const { mailFB, passFB } = require("./config");
 
 var rl = readline.createInterface({
 	input: process.stdin,

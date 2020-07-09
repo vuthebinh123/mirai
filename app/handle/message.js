@@ -8,8 +8,25 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 	const stringSimilarity = require('string-similarity');
 	var resetNSFW = false;
 
-	/* ================ CronJob ==================== */
+	/* ================ Check update ================ */
+	const axios = require('axios');
+	const semver = require('semver');
+	axios.get('https://raw.githubusercontent.com/roxtigger2003/mirai/master/package.json').then((res) => {
+		modules.log("Đang kiểm tra cập nhật...", 1);
+		var local = JSON.parse(fs.readFileSync('./package.json')).version;
+		var remote = res.data.version;
+		if (semver.lt(local, remote)) {
+			modules.log('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', 1);
+			api.sendMessage('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', admins[0]);
+			fs.writeFileSync('./.needUpdate', '');
+		}
+		else {
+			if (fs.existsSync('./.needUpdate')) fs.removeSync('./.needUpdate');
+			modules.log('Bạn đang sử dụng bản mới nhất!', 1);
+		}
+	}).catch(err => console.error(err));
 
+	/* ================ CronJob ==================== */
 	if (!fs.existsSync(__dirname + "/src/listCommands.json")) {
 		var template = [];
 		fs.writeFile(__dirname + "/src/listCommand.json", JSON.stringify(template), "utf-8", err => {
@@ -114,7 +131,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		});
 
 	/* ================ Staff Commands ==================== */
-
 		//lấy shortcut
 		if (contentMessage.length !== -1) {
 			var shortcut = JSON.parse(fs.readFileSync(__dirname + "/src/shortcut.json"));
@@ -403,57 +419,24 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var helpGroup = [];
 				var helpMsg = "";
 				helpList.forEach(help => {
-					if (!helpGroup.some(item => item.group == help.group)) {
-						helpGroup.push({
-							group: help.group,
-							cmds: [help.name]
-						});
-					}
-					else {
-						var getHelp = helpGroup.find(item => item.group == help.group);
-						getHelp.cmds.push(help.name);
-					}
+					if (!helpGroup.some(item => item.group == help.group)) helpGroup.push({ group: help.group, cmds: [help.name] });
+					else helpGroup.find(item => item.group == help.group).cmds.push(help.name);
 				});
-				helpGroup.forEach(help => {
-					let helpCmds = help.cmds.join(', ');
-					helpMsg += `==== ${help.group.charAt(0).toUpperCase() + help.group.slice(1)} ====\n${helpCmds}\n\n`
-				});
+				helpGroup.forEach(help => helpMsg += `===== ${help.group.charAt(0).toUpperCase() + help.group.slice(1)} =====\n${help.cmds.join(', ')}\n\n`);
 				return api.sendMessage(helpMsg, threadID, messageID);
 			}
 			else {
-				if (helpList.some(item => item.name == content)) {
+				if (helpList.some(item => item.name == content))
 					return api.sendMessage(
 						'=== Thông tin lệnh bạn đang tìm ===\n' +
 						'- Tên lệnh: ' + helpList.find(item => item.name == content).name + '\n' +
+						'- Nhóm lệnh: ' + helpList.find(item => item.name == content).group + '\n' +
 						'- Thông tin: ' + helpList.find(item => item.name == content).decs + '\n' +
-						'- Sử dụng: ' + prefix + helpList.find(item => item.name == content).usage + '\n' +
-						'- Hướng dẫn: ' + prefix + helpList.find(item => item.name == content).example + '\n' +
-						'- Thuộc loại: ' + helpList.find(item => item.name == content).group,
+						'- Cách dùng: ' + prefix + helpList.find(item => item.name == content).usage + '\n' +
+						'- Hướng dẫn: ' + prefix + helpList.find(item => item.name == content).example,
 						threadID, messageID
 					);
-				}
-				else {
-					var helpGroup = [];
-					var helpMsg = "";
-					helpList.forEach(help => {
-						if (!helpGroup.some(item => item.group == help.group)) {
-							helpGroup.push({
-								group: help.group,
-								cmds: [help.name]
-							});
-						}
-						else {
-							var getHelp = helpGroup.find(item => item.group == help.group);
-							getHelp.cmds.push(help.name);
-						}
-					});
-					helpGroup.forEach(help => {
-						let helpCmds = help.cmds.join(', ');
-						helpMsg += `===== ${help.group.charAt(0).toUpperCase() + help.group.slice(1)} =====\n${helpCmds}\n\n `
-					});
-					helpMsg = '>>> Lệnh không hợp lệ, đây là danh sách các lệnh <<<\n\n' + helpMsg;
-					return api.sendMessage(helpMsg, threadID, messageID);
-				}
+				else return api.sendMessage(`Lệnh bạn nhập không hợp lệ, hãy gõ ${prefix}help để xem tất cả các lệnh có trong bot.`, threadID, messageID);
 			}
 		}
 
@@ -470,9 +453,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var getData = JSON.parse(getList);
 				getData.push(addnew);
 				fs.writeFileSync(__dirname + "/src/requestList.json", JSON.stringify(getData));
-				return api.sendMessage("Đã thêm: " + addnew, threadID, () => {
-					api.sendMessage("ID " + senderID + " Đã thêm '" + addnew + "' vào request list", admins[0]);
-				}, messageID);
+				return api.sendMessage("Đã thêm: " + addnew, threadID, () => api.sendMessage("ID " + senderID + " Đã thêm '" + addnew + "' vào request list", admins[0]), messageID);
 			}
 			else if (content.indexOf("del") == 0 && admins.includes(senderID)) {
 				var deletethisthing = content.slice(4, content.length);
@@ -489,9 +470,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var getData = JSON.parse(getList);
 				if (getData.length == 0) return api.sendMessage("Không có việc cần làm", threadID, messageID);
 				let allWorks = "";
-				getData.map(item => {
-					allWorks = allWorks + `\n- ` + item;
-				});
+				getData.map(item => allWorks = allWorks + `\n- ` + item);
 				return api.sendMessage("Đây là toàn bộ yêu cầu mà các bạn đã gửi:" + allWorks, threadID, messageID);
 			}
 		}
@@ -503,24 +482,14 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			const morsify = require('morsify');
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
 			if (event.type == "message_reply") {
-				if (content.indexOf('encode') == 0) {
-					var encoded = morsify.encode(event.messageReply.body);
-					return api.sendMessage(encoded, threadID, messageID);
-				} else if (content.indexOf('decode') == 0) {
-					var decoded = morsify.decode(event.messageReply.body);
-					return api.sendMessage(decoded, threadID, messageID);
-				} else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
+				if (content.indexOf('encode') == 0) return api.sendMessage(morsify.encode(event.messageReply.body), threadID, messageID);
+				else if (content.indexOf('decode') == 0)return api.sendMessage(morsify.decode(event.messageReply.body), threadID, messageID);
+				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
 			}
 			else {
-				if (content.indexOf('encode') == 0) {
-					var msg = content.slice(7, contentMessage.length);
-					var encoded = morsify.encode(msg);
-					return api.sendMessage(encoded, threadID, messageID);
-				} else if (content.indexOf('decode') == 0) {
-					var msg = content.slice(7, contentMessage.length);
-					var decoded = morsify.decode(msg);
-					return api.sendMessage(decoded, threadID, messageID);
-				} else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
+				if (content.indexOf('encode') == 0) return api.sendMessage(morsify.encode(content.slice(7, contentMessage.length)), threadID, messageID);
+				else if (content.indexOf('decode') == 0) return api.sendMessage(morsify.decode(content.slice(7, contentMessage.length)), threadID, messageID);
+				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
 			}
 		}
 
@@ -530,27 +499,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			const Caesar = require('caesar-salad').Caesar;
 			var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
 			if (event.type == "message_reply") {
-				if (content.indexOf('encode') == 0) {
-					var encoded = Caesar.Cipher(process.env.CAESAR).crypt(event.messageReply.body);
-					return api.sendMessage(encoded, threadID, messageID);
-				}
-				else if (content.indexOf('decode') == 0) {
-					var decoded = Caesar.Decipher(process.env.CAESAR).crypt(event.messageReply.body);
-					return api.sendMessage(decoded, threadID, messageID);
-				}
+				if (content.indexOf('encode') == 0) return api.sendMessage(Caesar.Cipher(process.env.CAESAR).crypt(event.messageReply.body), threadID, messageID);
+				else if (content.indexOf('decode') == 0) return api.sendMessage(Caesar.Decipher(process.env.CAESAR).crypt(event.messageReply.body), threadID, messageID);
 				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help caesar`, threadID, messageID);
 			}
 			else {
-				if (content.indexOf('encode') == 0) {
-					var msg = content.slice(7, contentMessage.length);
-					var encoded = Caesar.Cipher(process.env.CAESAR).crypt(msg);
-					return api.sendMessage(encoded, threadID, messageID);
-				}
-				else if (content.indexOf('decode') == 0) {
-					var msg = content.slice(7, contentMessage.length);
-					var decoded = Caesar.Decipher(process.env.CAESAR).crypt(msg);
-					return api.sendMessage(decoded, threadID, messageID);
-				}
+				if (content.indexOf('encode') == 0) return api.sendMessage(Caesar.Cipher(process.env.CAESAR).crypt(content.slice(7, contentMessage.length)), threadID, messageID);
+				else if (content.indexOf('decode') == 0) return api.sendMessage(Caesar.Decipher(process.env.CAESAR).crypt(content.slice(7, contentMessage.length)), threadID, messageID);
 				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help caesar`, threadID, messageID);
 			}
 		}
@@ -561,27 +516,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			const Vigenere = require('caesar-salad').Vigenere;
 			var content = contentMessage.slice(prefix.length + 9, contentMessage.length);
 			if (event.type == "message_reply") {
-				if (content.indexOf('encode') == 0) {
-					var encoded = Vigenere.Cipher(process.env.VIGENERE).crypt(event.messageReply.body);
-					return api.sendMessage(encoded, threadID, messageID);
-				}
-				else if (content.indexOf('decode') == 0) {
-					var decoded = Vigenere.Decipher(process.env.VIGENERE).crypt(event.messageReply.body);
-					return api.sendMessage(decoded, threadID, messageID);
-				}
+				if (content.indexOf('encode') == 0) return api.sendMessage(Vigenere.Cipher(process.env.VIGENERE).crypt(event.messageReply.body), threadID, messageID);
+				else if (content.indexOf('decode') == 0) return api.sendMessage(Vigenere.Decipher(process.env.VIGENERE).crypt(event.messageReply.body), threadID, messageID);
 				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help vigenere`, threadID, messageID);
 			}
 			else {
-				if (content.indexOf('encode') == 0) {
-					var msg = content.slice(7, contentMessage.length);
-					var encoded = Vigenere.Cipher(process.env.VIGENERE).crypt(msg);
-					return api.sendMessage(encoded, threadID, messageID);
-				}
-				else if (content.indexOf('decode') == 0) {
-					var msg = content.slice(7, contentMessage.length);
-					var decoded = Vigenere.Decipher(process.env.VIGENERE).crypt(msg);
-					return api.sendMessage(decoded, threadID, messageID);
-				}
+				if (content.indexOf('encode') == 0) return api.sendMessage(Vigenere.Cipher(process.env.VIGENERE).crypt(content.slice(7, contentMessage.length)), threadID, messageID);
+				else if (content.indexOf('decode') == 0) return api.sendMessage(Vigenere.Decipher(process.env.VIGENERE).crypt(content.slice(7, contentMessage.length)), threadID, messageID);
 				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help vigenere`, threadID, messageID);
 			}
 		}
@@ -591,27 +532,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			const ROT47 = require('caesar-salad').ROT47;
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
 			if (event.type == "message_reply") {
-				if (content.indexOf('encode') == 0) {
-					var encoded = ROT47.Cipher().crypt(event.messageReply.body);
-					return api.sendMessage(encoded, threadID, messageID);
-				}
-				else if (content.indexOf('decode') == 0) {
-					var decoded = ROT47.Decipher().crypt(event.messageReply.body);
-					return api.sendMessage(decoded, threadID, messageID);
-				}
+				if (content.indexOf('encode') == 0) return api.sendMessage(ROT47.Cipher().crypt(event.messageReply.body), threadID, messageID);
+				else if (content.indexOf('decode') == 0) return api.sendMessage(ROT47.Decipher().crypt(event.messageReply.body), threadID, messageID);
 				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help rot47`, threadID, messageID);
 			}
 			else {
-				if (content.indexOf('encode') == 0) {
-					var msg = content.slice(7, contentMessage.length);
-					var encoded = ROT47.Cipher().crypt(msg);
-					return api.sendMessage(encoded, threadID, messageID);
-				}
-				else if (content.indexOf('decode') == 0) {
-					var msg = content.slice(7, contentMessage.length);
-					var decoded = ROT47.Decipher().crypt(msg);
-					return api.sendMessage(decoded, threadID, messageID);
-				}
+				if (content.indexOf('encode') == 0) return api.sendMessage(ROT47.Cipher().crypt(content.slice(7, contentMessage.length)), threadID, messageID);
+				else if (content.indexOf('decode') == 0) return api.sendMessage(ROT47.Decipher().crypt(content.slice(7, contentMessage.length)), threadID, messageID);
 				else return api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help rot47`, threadID, messageID);
 			}
 		}
@@ -641,9 +568,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					if (err) throw err;
 					let allShortcuts = JSON.parse(data);
 					let msg = '';
-					allShortcuts.forEach(item => {
-						msg = msg + item.in + ' -> ' + item.out + '\n';
-					});
+					allShortcuts.forEach(item => msg = msg + item.in + ' -> ' + item.out + '\n');
 					if (!msg) return api.sendMessage('Hiện tại không có shortcut nào.', threadID, messageID);
 					msg = 'Tất cả shortcut đang có là:\n' + msg;
 					api.sendMessage(msg, threadID, messageID);
@@ -658,11 +583,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					if (err) throw err;
 					var oldData = JSON.parse(data);
 					if (oldData.some(item => item.in == shortin)) return api.sendMessage("Shortcut này đã tồn tại!", threadID, messageID);
-					var pushJSON = {
-						in: shortin,
-						out: shortout
-					};
-					oldData.push(pushJSON);
+					oldData.push({ in: shortin, out: shortout });
 					fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => {
 						if (err) throw err;
 						api.sendMessage("Tạo shortcut mới thành công!", threadID, messageID);
@@ -1113,7 +1034,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//localtion iss
 		if (contentMessage.indexOf(`${prefix}iss`) == 0) {
-			return request (`http://api.open-notify.org/iss-now.json`, (err, response, body) => {
+			return request(`http://api.open-notify.org/iss-now.json`, (err, response, body) => {
 				if (err) throw err;
 				var jsonData = JSON.parse(body);
 				var position = jsonData["iss_position"];
@@ -1125,7 +1046,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//near-earth obj
 		if (contentMessage.indexOf(`${prefix}neo`) == 0) {
-			return request (`https://api.nasa.gov/neo/rest/v1/feed/today?detailed=true&api_key=DEMO_KEY`, (err, response, body) => {
+			return request(`https://api.nasa.gov/neo/rest/v1/feed/today?detailed=true&api_key=DEMO_KEY`, (err, response, body) => {
 				if (err) throw err;
 				var jsonData = JSON.parse(body);
 				var total = jsonData.element_count;
@@ -1135,7 +1056,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//spacex
 		if (contentMessage.indexOf(`${prefix}spacex`) == 0) {
-			return request (`https://api.spacexdata.com/v3/launches/latest`, (err, response, body) => {
+			return request(`https://api.spacexdata.com/v3/launches/latest`, (err, response, body) => {
 				if (err) throw err;
 				var data = JSON.parse(body);
 				api.sendMessage(
@@ -1160,16 +1081,16 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				if (err) throw err;
 				var split_body = body.split("\n");
 				var num_acronyms = split_body[4];
-				if (num_acronyms.includes("0")) api.sendMessage("Không tìm thấy từ viết tắt này trong từ điển.", threadID, messageID)
+				if (num_acronyms.includes("0")) api.sendMessage("Không tìm thấy từ viết tắt này trong từ điển.", threadID, messageID);
 				else {
 					for (var i = 6; i < split_body.length - 1; i += 4) {
-						var line = split_body[i]
-						line = line.trim()
+						var line = split_body[i];
+						line = line.trim();
 						var split_acr_array = line.split(" ");
-						var first_item = split_acr_array[0]
+						var first_item = split_acr_array[0];
 						if (split_acr_array.length === 1) {
-							first_item = first_item.slice(7, first_item.length - 8)
-							split_acr_array[0] = first_item
+							first_item = first_item.slice(7, first_item.length - 8);
+							split_acr_array[0] = first_item;
 						}
 						else {
 							var strpd_item = first_item.slice(7, first_item.length + 5);
@@ -1178,9 +1099,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							var strpd_last_item = last_item.slice(0, split_acr_array.length - 11);
 							split_acr_array[split_acr_array.length - 1] = strpd_last_item;
 						}
-						var final_acronym = split_acr_array.toString()
-						final_acronym = final_acronym.split(",").join(" ")
-						acronym_meanings.push(final_acronym)
+						var final_acronym = split_acr_array.toString();
+						final_acronym = final_acronym.split(",").join(" ");
+						acronym_meanings.push(final_acronym);
 					}
 					api.sendMessage(`Nghĩa của từ viết tắt '${content}' là:\n ` + acronym_meanings.join("\n - ") + `.`, threadID, messageID);
 				};
@@ -1263,7 +1184,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//hentaivn
 		if (contentMessage.indexOf(`${prefix}hentaivn -i`) == 0) {
 			const cheerio = require('cheerio');
-			const axios = require('axios');
 			var id = contentMessage.slice(prefix.length + 12, contentMessage.length);
 			if (!id) return api.sendMessage("Nhập id!", threadID, messageID);
 			axios.get(`https://hentaivn.net/id${id}`).then((response) => {
@@ -1316,7 +1236,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return economy.pornUseLeft(senderID).then(useLeft => {
 				if (useLeft == 0) return api.sendMessage(`Bạn đã hết số lần dùng ${prefix}porn.\nHãy nâng cấp lên Hạng NSFW cao hơn hoặc chờ đến ngày mai.`, threadID, messageID);
 				const cheerio = require('cheerio');
-				const axios = require('axios');
 				const ffmpeg = require("fluent-ffmpeg");
 				const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 				ffmpeg.setFfmpegPath(ffmpegPath);
@@ -1737,7 +1656,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 	/* ==================== Media Commands ==================== */
-
 		//get video facebook
 		if (contentMessage.indexOf(`${prefix}facebook -p`) == 0) {
 			var content = contentMessage.slice(prefix.length + 12, contentMessage.length);

@@ -1,9 +1,9 @@
 require("dotenv").config();
 const path = require("path");
-module.exports = {
+module.exports = { //Hãy sửa trong file .env
 	development: false,
 	prefix: process.env.PREFIX,
-	botName: process.env.BOT_NAME || "Project Mirai | Made by Catalizcs and SpermLord!",
+	botName: process.env.BOT_NAME,
 	googleSearch: process.env.GOOGLE_SEARCH,
 	wolfarm: process.env.WOLFARM,
 	yandex: process.env.YANDEX,

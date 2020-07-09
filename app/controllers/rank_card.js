@@ -1,7 +1,7 @@
 const jimp = require("jimp");
 const text2png = require("text2png");
 const fs = require("fs-extra");
-const request = require("request-promise");
+const request = require("request");
 const path = require("path");
 
 function getAvatar(id) {

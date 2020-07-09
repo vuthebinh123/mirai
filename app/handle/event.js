@@ -17,21 +17,20 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 					}
 					else {
 						let uid = event.logMessageData.addedParticipants[i].userFbId;
-						User.findUser(uid).then((user) => {
-							if (user == false) User.createUser(uid, true, event.threadID);
-							else
-								User.getName(uid).then(name => {
-									api.sendMessage({
-										body: "Chào mừng " + name + " đã vào group",
-										mentions: [
-											{
-												tag: name,
-												id: uid
-											}
-										]
-									}, event.threadID)
-								})
-						})
+						User.createUser(uid);
+						api.getUserInfo(uid, (err, result) => {
+							if (err) return console.error(err);
+							var name = result[uid].name;
+							api.sendMessage({
+								body: "Chào mừng " + name + " đã vào group",
+								mentions: [
+									{
+										tag: name,
+										id: uid
+									}
+								]
+							}, event.threadID);
+						});
 					}
 				}
 				break;
@@ -45,7 +44,7 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 			case "log:thread-color":
 				break;
 			case "log:thread-name":
-				Thread.changeName(event.threadID, event.logMessageData.name);
+				Thread.updateName(event.threadID, event.logMessageData.name);
 				break;
 		}
 	}

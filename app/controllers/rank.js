@@ -22,9 +22,7 @@ module.exports = function({ models, api }) {
 		}).then(function(user) {
 			if (!user) return;
 			const pointData = user.get({ plain: true }).point;
-			return user.update({
-				point: pointData + pointIncrement
-			});
+			return user.update({ point: pointData + pointIncrement });
 		}).then(function() {
 			return true;
 		}).catch(function(error) {

@@ -1,7 +1,5 @@
 const modules = require("./modules");
 const config = require("../config");
-const axios = require('axios');
-const semver = require('semver');
 const fs = require('fs-extra');
 module.exports = function({ api, models, __GLOBAL }) {
 	const User = require("./controllers/user")({ models, api });
@@ -23,19 +21,6 @@ module.exports = function({ api, models, __GLOBAL }) {
 	modules.log(`${api.getCurrentUserID()} - ${config.botName}`, "[ UID ]");
 	modules.log("Bắt đầu hoạt động!");
 	modules.log("This bot was made by Catalizcs(roxtigger2003) and SpermLord(spermlord)");
-	axios.get('https://raw.githubusercontent.com/roxtigger2003/mirai/master/package.json').then((res) => {
-		modules.log("Đang kiểm tra cập nhật...", 1);
-		var local = JSON.parse(fs.readFileSync('./package.json')).version;
-		var remote = res.data.version;
-		if (semver.lt(local, remote)) {
-			modules.log('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', -1);
-			fs.writeFileSync('./.needUpdate', '');
-		}
-		else {
-			if (fs.existsSync('./.needUpdate')) fs.removeSync('./.needUpdate');
-			modules.log('Bạn đang sử dụng bản mới nhất!', 1);
-		}
-	}).catch(err => console.error(err));
 	return function(error, event) {
 		if (error) return modules.log(error, 2);
 		switch (event.type) {

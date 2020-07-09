@@ -1,8 +1,12 @@
-require("dotenv").config();
-const fs = require('fs-extra');
-const git = require('simple-git');
-const {exec} = require('child_process');
-const cmd = require('node-cmd');
+try {
+	require("dotenv").config();
+	const fs = require('fs-extra');
+	const git = require('simple-git');
+	const {exec} = require('child_process');
+	const cmd = require('node-cmd');
+} catch (err) {
+	if (err) return console.log('Hãy gõ lệnh này vào trước khi chạy update: "npm i fs-extra simple-git node-cmd dotenv".');
+}
 var isGlitch = false;
 
 (async () => {
@@ -68,7 +72,6 @@ function modules() {
 					console.error('Lỗi: ' + data);
 					reject();
 				}
-				else console.warn('Cảnh báo: ' + data);
 			});
 		}
 		else {

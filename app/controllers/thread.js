@@ -32,7 +32,7 @@ module.exports = function ({ models, api }) {
 		});
 	}
 
-	function changeName(threadID, name) {
+	function updateName(threadID, name) {
 		return Thread.findOne({
 			where: {
 				threadID
@@ -107,7 +107,7 @@ module.exports = function ({ models, api }) {
 		getThreads,
 		createThread,
 		getName,
-		changeName,
+		updateName,
 		ban,
 		unban,
 		blockResend,

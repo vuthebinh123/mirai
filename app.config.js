@@ -17,7 +17,7 @@ module.exports = {
 			exec_interpreter: "node",
 			env: {
 				"NODE_ENV": "production"
-			},
+			}
 		}
-	],
+	]
 };

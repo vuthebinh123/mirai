@@ -2,27 +2,12 @@ const logger = require("../modules/log.js");
 module.exports = function ({ models, api }) {
 	const User = models.use('user');
 
-	function createUser(id, joinIn = false, threadid = null) {
+	function createUser(id) {
 		api.getUserInfo(id, (err, result) => {
 			if (err) return logger(err, 2);
 			const info = result[id];
 			User.findOrCreate({ where: { uid: id }, defaults: { info } }).then(([user, created]) => {
-				if (created) {
-					logger(id, 'New User')
-					if (joinIn == true && threadid != null) {
-						return getName(id).then(name => {
-							api.sendMessage({
-								body: "Chào mừng " + name + " đã vào group",
-								mentions: [
-									{
-										tag: name,
-										id: id
-									}
-								]
-							}, threadid)
-						})
-					}
-				}
+				if (created) logger(id, 'New User');
 			}).catch((error) => logger(error, 2))
 		})
 	}

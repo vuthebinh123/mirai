@@ -114,7 +114,7 @@ module.exports = function({ models, api }) {
 				var getReturn = await subtractMoney(uid, needPrice);
 				if (getReturn == true) {
 					setNSFW(uid, myTier + 1);
-					return 'Đã làm thì phải có ăn! Mua thành công Hạng ' + (myTier + 1);
+					return 'Đã làm thì phải có ăn! Mua thành công Hạng ' + (myTier + 1) + '!';
 				}
 			}
 		}).catch(function(error) {
@@ -183,7 +183,6 @@ module.exports = function({ models, api }) {
 
 	function resetNSFW() {
 		try {
-			User.update({ hentaiLeft: -1, pornLeft: -1 }, {where: {nsfwTier: -1}});
 			User.update({ hentaiLeft: 2, pornLeft: 1 }, {where: {nsfwTier: 0}});
 			User.update({ hentaiLeft: 4, pornLeft: 2 }, {where: {nsfwTier: 1}});
 			User.update({ hentaiLeft: 8, pornLeft: 4 }, {where: {nsfwTier: 2}});
@@ -219,9 +218,7 @@ module.exports = function({ models, api }) {
 		}).then(function(user) {
 			if (!user) return;
 			var moneyData = user.get({ plain: true }).money;
-			return user.update({
-				money: moneyData + moneyIncrement
-			});
+			return user.update({ money: moneyData + moneyIncrement });
 		}).then(function() {
 			return true;
 		}).catch(function(error) {
@@ -238,9 +235,7 @@ module.exports = function({ models, api }) {
 		}).then(function(user) {
 			if (!user) return;
 			var moneyData = user.get({ plain: true }).money;
-			return user.update({
-				money: moneyData - moneyDecrement
-			});
+			return user.update({ money: moneyData - moneyDecrement });
 		}).then(function() {
 			return true;
 		}).catch(function(error) {
