@@ -33,7 +33,7 @@ if (args[0] == '--force') isForce = true;
 async function backup() {
 	console.log('-> Đang xóa bản sao lưu cũ');
 	fs.removeSync('./tmp');
-	console.log("-> Đang sao lưu dữ liệu.");
+	console.log("-> Đang sao lưu dữ liệu");
 	fs.mkdirSync('./tmp');
 	if (fs.existsSync('./app/handle')) fs.copySync('./app/handle', './tmp/handle');
 	if (fs.existsSync('./appstate.json')) fs.copySync('./appstate.json', './tmp/appstate.json');
