@@ -1,7 +1,7 @@
 module.exports = function({ api, __GLOBAL, User }) {
 	return function ({ event }) {
 		if (__GLOBAL.resendBlocked.includes(parseInt(event.threadID))) return;
-		var getMsg = __GLOBAL.unsend.find(item => item.msgID == event.messageID);
+		var getMsg = __GLOBAL.messages.find(item => item.msgID == event.messageID);
 		User.getName(event.senderID).then(name => {
 			if (event.senderID != api.getCurrentUserID())
 				return api.sendMessage({

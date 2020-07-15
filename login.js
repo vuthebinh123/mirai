@@ -1,5 +1,5 @@
 const fs = require("fs-extra");
-const login = require("facebook-chat-api");
+const login = require("fca-unoffcial");
 const readline = require("readline");
 
 var rl = readline.createInterface({
@@ -22,7 +22,7 @@ login(obj, option, (err, api) => {
 	if (err) {
 		switch (err.error) {
 			case "login-approval":
-				console.log("Nhập mã xác minh 2 lớp: ");
+				console.log("Nhập mã xác minh 2 lớp:");
 				rl.on("line", line => {
 					err.continue(line);
 					rl.close();

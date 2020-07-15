@@ -9,9 +9,6 @@ module.exports = function ({ sequelize, Sequelize }) {
 			type: Sequelize.BIGINT,
 			unique: true
 		},
-		info: {
-			type: Sequelize.JSON
-		},
 		point: {
 			type: Sequelize.BIGINT,
 			defaultValue: 0

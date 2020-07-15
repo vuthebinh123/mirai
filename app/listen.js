@@ -5,7 +5,7 @@ module.exports = function({ api, models, __GLOBAL }) {
 	const User = require("./controllers/user")({ models, api });
 	const Thread = require("./controllers/thread")({ models, api });
 	const Rank = require("./controllers/rank")({ models, api });
-	const economy = require("./controllers/economy")({ models, api });
+	const Economy = require("./controllers/economy")({ models, api });
 	(async () => {
 		modules.log("Đang khởi tạo biến môi trường...");
 		__GLOBAL.userBlocked = (await User.getUsers({ block: true })).map(e => e.uid);
@@ -14,7 +14,7 @@ module.exports = function({ api, models, __GLOBAL }) {
 		__GLOBAL.NSFWBlocked = (await Thread.getThreads({ blockNSFW: true })).map(e => e.threadID);
 		modules.log("Khởi tạo biến môi trường xong!");
 	})();
-	const handleMessage = require("./handle/message")({ api, modules, config, __GLOBAL, User, Thread, Rank, economy });
+	const handleMessage = require("./handle/message")({ api, modules, config, __GLOBAL, User, Thread, Rank, Economy });
 	const handleEvent = require("./handle/event")({ api, config, __GLOBAL, User, Thread });
 	const handleUnsend = require("./handle/unsend")({ api, __GLOBAL, User });
 	modules.log(config.prefix || "<Không có>", "[ PREFIX ]");

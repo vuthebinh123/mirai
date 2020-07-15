@@ -6,7 +6,7 @@ module.exports = function ({ models, api }) {
 		api.getUserInfo(id, (err, result) => {
 			if (err) return logger(err, 2);
 			const info = result[id];
-			User.findOrCreate({ where: { uid: id }, defaults: { info } }).then(([user, created]) => {
+			User.findOrCreate({ where: { uid: id } }).then(([user, created]) => {
 				if (created) logger(id, 'New User');
 			}).catch((error) => logger(error, 2))
 		})
@@ -34,9 +34,11 @@ module.exports = function ({ models, api }) {
 			where: {
 				uid
 			}
-		}).then(function(user) {
+		}).then(async function(user) {
 			if (!user) return;
-			return user.get({ plain: true }).info.name;
+			let userInfo = await api.getUserInfo(uid);
+			let name = userInfo[uid].name;
+			return name.toString();
 		});
 	}
 
@@ -45,9 +47,11 @@ module.exports = function ({ models, api }) {
 			where: {
 				uid
 			}
-		}).then(function(user) {
+		}).then(async function(user) {
 			if (!user) return;
-			return user.get({ plain: true }).info.gender;
+			let userInfo = await api.getUserInfo(uid);
+			let gender = userInfo[uid].gender;
+			return gender.toString();
 		});
 	}
 

@@ -12,15 +12,13 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 				for (var i = 0; i < event.logMessageData.addedParticipants.length; i++) {
 					if (event.logMessageData.addedParticipants[i].userFbId == api.getCurrentUserID()) {
 						Thread.createThread(event.threadID);
-						api.sendMessage("Đã kết nối thành công!\nVui lòng sử dụng help all để biết thêm chi tiết lệnh >w<", event.threadID);
+						api.sendMessage(`Đã kết nối thành công!\nVui lòng sử dụng ${prefix}help để biết thêm chi tiết lệnh >w<`, event.threadID);
 						api.changeNickname(config.botName, event.threadID, api.getCurrentUserID());
 					}
 					else {
 						let uid = event.logMessageData.addedParticipants[i].userFbId;
 						User.createUser(uid);
-						api.getUserInfo(uid, (err, result) => {
-							if (err) return console.error(err);
-							var name = result[uid].name;
+						User.getName(uid).then(name => {
 							api.sendMessage({
 								body: "Chào mừng " + name + " đã vào group",
 								mentions: [
@@ -35,7 +33,7 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 				}
 				break;
 			case "log:unsubscribe":
-				User.getName(event.logMessageData.leftParticipantFbId).then(name => api.sendMessage("Oops, " + name + " vừa tàng hình bay đi", event.threadID));
+				User.getName(event.logMessageData.leftParticipantFbId).then(name => api.sendMessage(name + " đã mãi mãi đi xa.", event.threadID));
 				break;
 			case "log:thread-icon":
 				break;

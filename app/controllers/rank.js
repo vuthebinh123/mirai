@@ -61,11 +61,7 @@ module.exports = function({ models, api }) {
 		const level = expToLevel(point);
 		const expCurrent = point - levelToExp(level);
 		const expNextLevel = levelToExp(level + 1) - levelToExp(level);
-		return {
-			level,
-			expCurrent,
-			expNextLevel
-		};
+		return { level, expCurrent, expNextLevel };
 	}
 
 	return {

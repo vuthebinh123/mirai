@@ -1,4 +1,4 @@
-module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, economy }) {
+module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, Economy }) {
 	/* ================ Config ==================== */
 	let {prefix, googleSearch, wolfarm, yandex, openweather, tenor, saucenao, admins, ENDPOINT, nsfwGodMode} = config;
 	const fs = require("fs-extra");
@@ -75,24 +75,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						oldData.wake.push(item);
 						break;
 					}
-					while (timer == "08:00" && !oldData.fact.includes(item)) {
-						oldData.fact.push(item);
-						request("https://random-word-api.herokuapp.com/word?number=1", (err, response, body) => {
-							if (err) throw err;
-							const randomfacts = require("@dpmcmlxxvi/randomfacts");
-							var retrieve = JSON.parse(body);
-							var fact = randomfacts.make(retrieve);
-							api.sendMessage('📖 Fact của ngày hôm nay:\n "' + fact + '".', item);
-						});
-						break;
-					}
 					fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(oldData));
 				});
 				if (timer == "08:05") fs.unlinkSync(__dirname + "/src/listThread.json");
 				if (timer == "00:00")
 					if (resetNSFW == false) {
 						resetNSFW = true;
-						economy.resetNSFW();
+						Economy.resetNSFW();
 					}
 			}, 1000);
 		});
@@ -125,7 +114,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		User.createUser(senderID);
 		Thread.createThread(threadID);
 
-		__GLOBAL.unsend.push({
+		__GLOBAL.messages.push({
 			msgID: messageID,
 			msgBody: contentMessage
 		});
@@ -133,8 +122,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 	/* ================ Staff Commands ==================== */
 		//lấy shortcut
 		if (contentMessage.length !== -1) {
-			var shortcut = JSON.parse(fs.readFileSync(__dirname + "/src/shortcut.json"));
-			if (shortcut.some(item => item.in == contentMessage)) return api.sendMessage(shortcut.find(item => item.in == contentMessage).out, threadID);
+			let shortcut = JSON.parse(fs.readFileSync(__dirname + "/src/shortcut.json"));
+			if (shortcut.some(item => item.id == threadID)) {
+				let getThread = shortcut.find(item => item.id == threadID).shorts;
+				if (getThread.some(item => item.in == contentMessage)) return api.sendMessage(getThread.find(item => item.in == contentMessage).out, threadID);
+			}
 		}
 
 		//lấy file cmds
@@ -363,7 +355,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//restart
-		if (contentMessage == `${prefix}restart` && admins.includes(senderID)) return api.sendMessage(`Hệ thống restart khẩn ngay bây giờ!!`, threadID, () =>  require("node-cmd").run("pm2 restart 0") , messageID);
+		if (contentMessage == `${prefix}restart` && admins.includes(senderID)) return api.sendMessage(`Hệ thống restart khẩn ngay bây giờ!!`, threadID, () => require("node-cmd").run("pm2 restart 0"), messageID);
 
 	/* ==================== Help Commands ================*/
 
@@ -411,7 +403,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return api.sendMessage("Xóa lệnh hoàn tất!", threadID, messageID);
 		}
 
-		//gethelp
+		//help
 		if (contentMessage.indexOf(`${prefix}help`) == 0) {
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
 			var helpList = JSON.parse(fs.readFileSync(__dirname + "/src/listCommands.json"));
@@ -555,8 +547,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				return fs.readFile(__dirname + "/src/shortcut.json", "utf-8", (err, data) => {
 					if (err) throw err;
 					var oldData = JSON.parse(data);
-					if (!oldData.some(item => item.in == delThis)) return api.sendMessage("Shortcut này không tồn tại.", threadID, messageID);
-					oldData.splice(oldData.findIndex(x => x.in === delThis), 1);
+					var getThread = oldData.find(item => item.id == threadID).shorts;
+					if (!getThread.some(item => item.in == delThis)) return api.sendMessage("Shortcut này không tồn tại.", threadID, messageID);
+					getThread.splice(getThread.findIndex(item => item.in === delThis), 1);
 					fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => {
 						if (err) throw err;
 						api.sendMessage("Xóa shortcut thành công!", threadID, messageID);
@@ -566,24 +559,41 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			else if (content.indexOf(`all`) == 0) 
 				return fs.readFile(__dirname + "/src/shortcut.json", "utf-8", (err, data) => {
 					if (err) throw err;
-					let allShortcuts = JSON.parse(data);
+					let allData = JSON.parse(data);
 					let msg = '';
-					allShortcuts.forEach(item => msg = msg + item.in + ' -> ' + item.out + '\n');
+					if (!allData.some(item => item.id == threadID)) return api.sendMessage('Hiện tại không có shortcut nào.', threadID, messageID);
+					if (allData.some(item => item.id == threadID)) {
+						let getThread = allData.find(item => item.id == threadID).shorts;
+						getThread.forEach(item => msg = msg + item.in + ' -> ' + item.out + '\n');
+					}
 					if (!msg) return api.sendMessage('Hiện tại không có shortcut nào.', threadID, messageID);
-					msg = 'Tất cả shortcut đang có là:\n' + msg;
+					msg = 'Tất cả shortcut đang có trong group là:\n' + msg;
 					api.sendMessage(msg, threadID, messageID);
 				});
 			else {
 				let narrow = content.indexOf(" => ");
+				if (narrow == -1) return api.sendMessage(`Không đúng format. Hãy tìm hiểu thêm tại ${prefix}help short.`, threadID, messageID);
 				let shortin = content.slice(0, narrow);
 				let shortout = content.slice(narrow + 4, content.length);
+				if (shortin == shortout) return api.sendMessage('Input và output giống nhau', threadID, messageID);
 				if (!shortin) return api.sendMessage("Bạn chưa nhập input.", threadID, messageID);
 				if (!shortout) return api.sendMessage("Bạn chưa nhập output.", threadID, messageID);
 				return fs.readFile(__dirname + "/src/shortcut.json", "utf-8", (err, data) => {
 					if (err) throw err;
 					var oldData = JSON.parse(data);
-					if (oldData.some(item => item.in == shortin)) return api.sendMessage("Shortcut này đã tồn tại!", threadID, messageID);
-					oldData.push({ in: shortin, out: shortout });
+					if (!oldData.some(item => item.id == threadID)) {
+						let addThis = {
+							id: threadID,
+							shorts: []
+						}
+						addThis.shorts.push({ in: shortin, out: shortout });
+						oldData.push(addThis);
+						fs.writeFileSync(__dirname + "/src/shortcut.json", JSON.stringify(oldData));
+						return;
+					}
+					let getShort = oldData.find(item => item.id == threadID);
+					if (getShort.shorts.some(item => item.in == shortin)) return api.sendMessage("Shortcut này đã tồn tại trong group này!", threadID, messageID);
+					getShort.shorts.push({ in: shortin, out: shortout });
 					fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => {
 						if (err) throw err;
 						api.sendMessage("Tạo shortcut mới thành công!", threadID, messageID);
@@ -633,18 +643,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return api.sendMessage("Nếu bạn muốn thức dậy vào lúc " + content + ", những thời gian hoàn hảo nhất để đi ngủ là:\n" + sleepTime.join(', ') + "\nFact: Thời gian để bạn vào giấc ngủ từ lúc nhắm mắt là 15-20 phút", threadID, messageID);
 		}
 
-		//gọi bot
-		if (contentMessage == `${prefix}mirai` || contentMessage.indexOf('mirai') == 0) return api.sendMessage(`Dạ gọi em đây ạ?`, threadID, messageID);
-
-		//lenny
-		if (contentMessage == `${prefix}lenny` || contentMessage.indexOf('lenny') == 0) return api.sendMessage("( ͡° ͜ʖ ͡°)", threadID, messageID);
-
-		//mlem
-		if (contentMessage == `${prefix}mlem` || contentMessage.indexOf('mlem') == 0) return api.sendMessage("( ͡°👅 ͡°)", threadID, messageID);
-
-		//idk
-		if (contentMessage == `${prefix}idk` || contentMessage.indexOf('idk') == 0) return api.sendMessage("¯\\_(ツ)_/¯", threadID, messageID);
-
 		//prefix
 		if (contentMessage.indexOf(`prefix`) == 0) return api.sendMessage(`Prefix là: ${prefix}`, threadID, messageID);
 
@@ -652,48 +650,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf("credits") == 0) return api.sendMessage("Project Mirai được thực hiện bởi:\nSpermLord: https://fb.me/MyNameIsSpermLord\nCatalizCS: https://fb.me/Cataliz2k\nFull source code at: https://github.com/roxtigger2003/mirai", threadID, messageID);
 
 		//simsimi
-		if (contentMessage.indexOf(`${prefix}sim`) == 0) {
-			return api.sendMessage('Hiện tại API Simsimi vẫn đang lỗi!', threadID, messageID);
-			const fetch = require('node-fetch');
-			var content = contentMessage.slice(pretix.length + 49, contentMessage.length);
-			const params = new URLSearchParams();
-			params.set('lang', 'vi');
-			params.set('hoi', content);
-			params.set('token', 
-				Buffer.from(
-					Buffer.from("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36" + "KhongAPI")
-						.toString("base64")
-						.split("")
-						.map(x => x.charCodeAt(0).toString(16).split(""))
-						.flat(Infinity)
-						.reverse()
-						.join("")
-				).toString("base64")
-					.split("")
-					.map(x => x.charCodeAt(0).toString(16).split(""))
-					.flat(Infinity)
-					.reverse()
-					.join("")
-			);
-			if (!content) return api.sendMessage("Nhập tin nhắn!", threadID, messageID);
-			fetch("https://sim.vnoi.xyz/simsimi.php", {
-				method: "post",
-				body: params.toString(),
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-					"Content-Length": params.toString().length,
-					Origin: "https://sim.vnoi.xyz",
-					Referer: "https://sim.vnoi.xyz/?lang=vi",
-					"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36"
-				}
-			}).then(async (res) => {
-				if (res.status != 200) return api.sendMessage("Đã có lỗi xảy ra!", threadID, messageID)
-				var msg = await res.json();
-				if (msg.error && msg.error != -1) return api.sendMessage("Đã có lỗi xảy ra", threadID, messageID)
-				api.sendMessage(msg.message, threadID, messageID)
-			});
-			return;
-		}
+		if (contentMessage.indexOf(`${prefix}sim`) == 0) return request(`https://simsumi.herokuapp.com/api?text=${encodeURIComponent(contentMessage.slice(preix.length + 4, contentMessage.length))}&lang=vi`, (err, response, body) => api.sendMessage((JSON.parse(body).success != '') ? JSON.parse(body).success : 'Không có câu trả nời nào.', threadID, messageID));
 
 		//random màu cho theme chat
 		if (contentMessage == `${prefix}randomcolor`) {
@@ -709,14 +666,15 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var title = content.slice(0, content.indexOf(" -> "));
 			var options = content.substring(content.indexOf(" -> ") + 4)
 			var option = options.split(" | ");
-			var object = {}
+			var object = {};
+			if (option.length == 1 && option[0].includes(' |')) option[0] = option[0].replace(' |', '');
 			for (var i = 0; i < option.length; i++) object[option[i]] = false;
-			api.createPoll(title, threadID, object, (err) => {
-				if(err) return api.sendMessage("Có lỗi xảy ra vui lòng thử lại", threadID, messageID);
+			return api.createPoll(title, threadID, object, (err) => {
+				if (err) api.sendMessage("Có lỗi xảy ra vui lòng thử lại", threadID, messageID)
 			});
 		}
 
-		//biến nhóm chat thành vũ trường
+		//rainbow
 		if (contentMessage.indexOf(`${prefix}rainbow`) == 0) {
 			var value = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			if (isNaN(value)) return api.sendMessage('Dữ liệu không phải là một con số', threadID, messageID);
@@ -755,15 +713,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			request(encodeURI("https://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + openweather + "&units=metric&lang=vi"), (err, response, body) => {
 				if (err) throw err;
 				var weatherData = JSON.parse(body);
-				var sunrise = weatherData.sys.sunrise;
-				var sunset = weatherData.sys.sunset;
-				var sunrise_date = moment.unix(sunrise).tz("Asia/Ho_Chi_Minh");
-				var sunset_date = moment.unix(sunset).tz("Asia/Ho_Chi_Minh");
 				if (weatherData.cod !== 200) return api.sendMessage(`Địa điểm ${city} không tồn tại!`, threadID, messageID);
+				var sunrise_date = moment.unix(weatherData.sys.sunrise).tz("Asia/Ho_Chi_Minh");
+				var sunset_date = moment.unix(weatherData.sys.sunset).tz("Asia/Ho_Chi_Minh");
 				api.sendMessage({
 					body: '🌡 Nhiệt độ: ' + weatherData.main.temp + '°C' + '\n' +
 								'🌡 Nhiệt độ cơ thể cảm nhận được: ' + weatherData.main.feels_like + '°C' + '\n' +
-								'☁️ bầu trời hiện tại: ' + weatherData.weather[0].description + '\n' +
+								'☁️ Bầu trời hiện tại: ' + weatherData.weather[0].description + '\n' +
 								'💦 Độ ẩm: ' + weatherData.main.humidity + '%' + '\n' +
 								'💨 Tốc độ gió: ' + weatherData.wind.speed + 'km/h' + '\n' +
 								'🌅 Mặt trời mọc vào lúc: ' + sunrise_date.format('HH:mm:ss') + '\n' +
@@ -824,21 +780,14 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//waifu
-		if (contentMessage === `${prefix}waifu`) {
+		if (contentMessage == `${prefix}waifu`) {
 			var route = Math.round(Math.random() * 10);
-			if (route == 1 || route == 0) {
+			if (route == 1 || route == 0 || route == 3) {
 				api.sendMessage("Dạ em sẽ làm vợ anh <3", threadID, messageID);
 				api.sendMessage("Yêu chàng nhiều <3", threadID, messageID);
 				return;
 			}
-			else if (route == 2) return api.sendMessage("Làm Bạn thôi nhé :'(", threadID, messageID);
-			else if (route == 3) {
-				api.sendMessage("Dạ em sẽ làm vợ anh <3", threadID, messageID);
-				api.sendMessage("Yêu chàng nhiều <3", threadID, messageID);
-				return;
-			}
-			else if (route > 4) {
-				api.sendMessage("-.-", threadID, messageID);
+			else if (route == 2 || route > 4) {
 				api.sendMessage("Chúng ta chỉ là bạn thôi :'(", threadID, messageID);
 				return;
 			}
@@ -848,12 +797,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}roll`) == 0) {
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
 			var splitContent = content.split(" ");
-			var min = splitContent[0];
-			var max = splitContent[1];
-			if (isNaN(min) || isNaN(max)) return api.sendMessage('Dữ liệu bạn nhập không phải là một con số "/', threadID, messageID);
-			if (min >= max) return api.sendMessage('Oops, số kết thúc của bạn lớn hơn hoặc bằng số bắt đầu "/', threadID, messageID);
-			var randomNumber = Math.floor(Math.random() * (max - min + 1) + min);
-			return api.sendMessage(`uwu con số đẹp nhất em chọn được là: ${randomNumber}`, threadID, messageID);
+			if (splitContent == '') return api.sendMessage(`uwu con số đẹp nhất em chọn được là: ${Math.floor(Math.random() * 99)}`, threadID, messageID);
+			if (splitContent.length != 2) return api.sendMessage(`Sai format, bạn hãy đọc hướng dẫn trong ${prefix}help roll để biết thêm chi tiết.`, threadID, messageID)
+			var min = parseInt(splitContent[0]);
+			var max = parseInt(splitContent[1]);
+			if (isNaN(min) || isNaN(max)) return api.sendMessage('Dữ liệu bạn nhập không phải là một con số.', threadID, messageID);
+			if (min >= max) return api.sendMessage('Oops, số kết thúc của bạn lớn hơn hoặc bằng số bắt đầu.', threadID, messageID);
+			return api.sendMessage(`uwu con số đẹp nhất em chọn được là: ${Math.floor(Math.random() * (max - min + 1) + min)}`, threadID, messageID);
 		}
 
 		//Khiến bot nhái lại tin nhắn bạn
@@ -861,11 +811,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//rank
 		if (contentMessage.indexOf(`${prefix}rank`) == 0) {
-			const createCard = require("../controllers/rank_card");
+			const createCard = require("../controllers/rank_card.js");
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
 			if (content.length == 0)
 				(async () => {
-					let name = await User.getName(senderID)
+					let name = await User.getName(senderID);
 					Rank.getPoint(senderID).then(point => createCard({ id: senderID, name, ...point })).then(path => {
 						api.sendMessage(
 							{
@@ -880,7 +830,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				for (var i = 0; i < Object.keys(event.mentions).length; i++) {
 					let uid = Object.keys(event.mentions)[i];
 					(async () => {
-						let name = await User.getName(uid)
+						let name = await User.getName(senderID);
 						Rank.getPoint(uid).then(point => createCard({ id: uid, name, ...point })).then(path => {
 							api.sendMessage(
 								{
@@ -911,7 +861,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				lang = 'vi';
 			}
 			return request(encodeURI(`https://translate.yandex.net/api/v1.5/tr.json/translate?key=${yandex}&text=${translateThis}&lang=${lang}`), (err, response, body) => {
-				if (err) return api.sendMessage("Server đã xảy ra vấn đề, vui lòng báo lại cho admin!!!", threadID, messageID)
+				if (err) return api.sendMessage("Đã có lỗi xảy ra!", threadID, messageID)
 				var retrieve = JSON.parse(body);
 				var convert = retrieve.text[0];
 				var splitLang = retrieve.lang.split("-");
@@ -1128,7 +1078,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//cân bằng phương trình hóa học
 		if (contentMessage.indexOf(`${prefix}chemeb`) == 0) {
-			console.log = function() {};
+			console.log = function() {}; //Disable console.log() in this command.
 			const chemeb = require('chem-eb');
 			if (event.type == "message_reply") {
 				var msg = event.messageReply.body;
@@ -1147,10 +1097,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 	/* ==================== NSFW Commands ==================== */
 
 		//nhentai ramdom code
-		if (contentMessage == `${prefix}nhentai -r`) return api.sendMessage(`Code lý tưởng của nii-chan là: ${Math.floor(Math.random() * 99999)}`, threadID, messageID);
+		if (contentMessage == `${prefix}nhentai -r`) return api.sendMessage((__GLOBAL.NSFWBlocked.includes(threadID)) ? 'Nhóm này đang bị tắt NSFW!' : `Code lý tưởng của nii-chan là: ${Math.floor(Math.random() * 99999)}`, threadID, messageID);
 
 		//nhentai search
 		if (contentMessage.indexOf(`${prefix}nhentai -i`) == 0) {
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
 			let id = contentMessage.slice(prefix.length + 11, contentMessage.length).trim();
 			if (!id) return api.sendMessage("Nhập id!", threadID, messageID);
 			return request(`https://nhentai.net/api/gallery/${id}`, (error, response, body) => {
@@ -1183,6 +1134,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//hentaivn
 		if (contentMessage.indexOf(`${prefix}hentaivn -i`) == 0) {
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			return api.sendMessage('Hiện tại HentaiVN đã đổi cách hoạt động của trang: Kiểm tra trình duyệt + IP hợp lệ và phải qua bước xác thực bằng hình ảnh thì mới cho vào.\nHiện tại SpermLord vẫn chưa tìm ra cách vượt, nên sẽ tạm thời tắt tính năng này.', threadID, messageID);
 			const cheerio = require('cheerio');
 			var id = contentMessage.slice(prefix.length + 12, contentMessage.length);
 			if (!id) return api.sendMessage("Nhập id!", threadID, messageID);
@@ -1233,7 +1186,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//porn pics
 		if (contentMessage.indexOf(`${prefix}porn`) == 0) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
-			return economy.pornUseLeft(senderID).then(useLeft => {
+			return Economy.pornUseLeft(senderID).then(useLeft => {
 				if (useLeft == 0) return api.sendMessage(`Bạn đã hết số lần dùng ${prefix}porn.\nHãy nâng cấp lên Hạng NSFW cao hơn hoặc chờ đến ngày mai.`, threadID, messageID);
 				const cheerio = require('cheerio');
 				const ffmpeg = require("fluent-ffmpeg");
@@ -1261,7 +1214,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					return api.sendMessage('=== Tất cả các tag Porn ===\n' + pornTags, threadID, messageID);
 				}
 				axios.get(`https://www.pornhub.com/album/${album[content]}`).then((response) => {
-					if (useLeft != -1) economy.subtractPorn(senderID);
+					if (useLeft != -1) Economy.subtractPorn(senderID);
 					if (response.status == 200) {
 						const html = response.data;
 						const $ = cheerio.load(html);
@@ -1316,7 +1269,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//hentai
 		if (contentMessage.indexOf(`${prefix}hentai`) == 0) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
-			return economy.hentaiUseLeft(senderID).then(useLeft => {
+			return Economy.hentaiUseLeft(senderID).then(useLeft => {
 				if (useLeft == 0) return api.sendMessage(`Bạn đã hết số lần dùng ${prefix}hentai.\nHãy nâng cấp lên Hạng NSFW cao hơn hoặc chờ đến ngày mai.`, threadID, messageID);
 				var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
 				var jsonData = fs.readFileSync(__dirname + "/src/anime.json");
@@ -1328,7 +1281,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					return api.sendMessage('=== Tất cả các tag Hentai ===\n' + nsfwTags, threadID, messageID);
 				}
 				request(data[content], (error, response, body) => {
-					if (useLeft != -1) economy.subtractHentai(senderID);
+					if (useLeft != -1) Economy.subtractHentai(senderID);
 					let picData = JSON.parse(body);
 					let getURL = picData.url;
 					let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
@@ -1347,9 +1300,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage == `${prefix}mynsfw`) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
 			(async () => {
-				let tier = await economy.getNSFW(senderID);
-				let hentai = await economy.hentaiUseLeft(senderID);
-				let porn = await economy.pornUseLeft(senderID);
+				let tier = await Economy.getNSFW(senderID);
+				let hentai = await Economy.hentaiUseLeft(senderID);
+				let porn = await Economy.pornUseLeft(senderID);
 				if (tier == -1) api.sendMessage('Bạn đang ở God Mode.\nBạn sẽ không bị giới hạn số lần dùng lệnh NSFW.', threadID, messageID);
 				else api.sendMessage(`Hạng NSFW của bạn là ${tier}.\nSố lần sử dụng ${prefix}porn còn lại: ${porn}.\nSố lần sử dụng ${prefix}hentai còn lại: ${hentai}.`, threadID, messageID);
 			})();
@@ -1360,10 +1313,10 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage == `${prefix}buynsfw`) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
 			(async () => {
-				let tier = await economy.getNSFW(senderID);
+				let tier = await Economy.getNSFW(senderID);
 				if (tier == -1) api.sendMessage('Bạn đang ở God Mode nên sẽ không thể mua.', threadID, messageID);
 				else {
-					let buy = await economy.buyNSFW(senderID);
+					let buy = await Economy.buyNSFW(senderID);
 					if (buy == false) api.sendMessage('Đã có lỗi xảy ra!', threadID, messageID);
 					else api.sendMessage(buy.toString(), threadID, messageID);
 				}
@@ -1378,12 +1331,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var content = contentMessage.slice(prefix.length + 8,contentMessage.length);
 			var sender = content.slice(0, content.lastIndexOf(" "));
 			var tierSet = content.substring(content.lastIndexOf(" ") + 1);
-			return economy.getMoney(senderID).then((moneydb) => {
+			return Economy.getMoney(senderID).then((moneydb) => {
 				if (isNaN(tierSet)) return api.sendMessage('Số hạng NSFW cần set của bạn không phải là 1 con số!', threadID, messageID);
 				if (tierSet > 5 || tierSet < -1) return api.sendMessage('Hạng NSFW không được dưới -1 và vượt quá 5', threadID, messageID);
 				if (tierSet == -1 && nsfwGodMode == false) return api.sendMessage('Bạn chưa bật NSFW God Mode trong config.', threadID, messageID);
-				if (!mention && sender == 'me' && tierSet != -1) return api.sendMessage("Đã sửa hạng NSFW của bản thân thành " + tierSet, threadID, () => economy.setNSFW(senderID, parseInt(tierSet)), messageID);
-				if (!mention && sender == 'me' && tierSet == -1) return api.sendMessage("Đã bật God Mode cho bản thân!\nBạn sẽ không bị trừ số lần sử dụng lệnh NSFW.", threadID, () => economy.setNSFW(senderID, parseInt(tierSet)), messageID);
+				if (!mention && sender == 'me' && tierSet != -1) return api.sendMessage("Đã sửa hạng NSFW của bản thân thành " + tierSet, threadID, () => Economy.setNSFW(senderID, parseInt(tierSet)), messageID);
+				if (!mention && sender == 'me' && tierSet == -1) return api.sendMessage("Đã bật God Mode cho bản thân!\nBạn sẽ không bị trừ số lần sử dụng lệnh NSFW.", threadID, () => Economy.setNSFW(senderID, parseInt(tierSet)), messageID);
 				if (sender != 'me' && tierSet != -1)
 					api.sendMessage(
 						{
@@ -1396,7 +1349,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							]
 						},
 						threadID,
-						() => economy.setNSFW(mention, parseInt(tierSet)),
+						() => Economy.setNSFW(mention, parseInt(tierSet)),
 						messageID
 					);
 				if (senderID != 'me' && tierSet == -1)
@@ -1411,7 +1364,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							]
 						},
 						threadID,
-						() => economy.setNSFW(mention, parseInt(tierSet)),
+						() => Economy.setNSFW(mention, parseInt(tierSet)),
 						messageID
 					);
 			});
@@ -1429,9 +1382,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}money`) == 0) {
 			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			var mention = Object.keys(event.mentions)[0];
-			if (!content) return economy.getMoney(senderID).then((moneydb) => api.sendMessage(`Số tiền của bạn hiện đang có là: ${moneydb} đô`, threadID, messageID));
+			if (!content) return Economy.getMoney(senderID).then((moneydb) => api.sendMessage(`Số tiền của bạn hiện đang có là: ${moneydb} đô`, threadID, messageID));
 			else if (content.indexOf("@") !== -1)
-				return economy.getMoney(mention).then((moneydb) => {
+				return Economy.getMoney(mention).then((moneydb) => {
 					api.sendMessage(
 						{
 							body: `Số tiền của ${event.mentions[mention].replace("@", "")} hiện đang có là: ${moneydb} đô.`,
@@ -1451,7 +1404,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//daily gift
 		if (contentMessage.indexOf(`${prefix}daily`) == 0) {
 			let cooldown = 8.64e7; //86400000
-			economy.getDailyTime(senderID).then((lastDaily) => {
+			Economy.getDailyTime(senderID).then((lastDaily) => {
 				if (lastDaily !== null && cooldown - (Date.now() - lastDaily) > 0) {
 					let time = ms(cooldown - (Date.now() - lastDaily));
 					api.sendMessage(
@@ -1467,8 +1420,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						"Bạn đã nhận phần thưởng của ngày hôm nay. Cố gắng lên nhé <3",
 						threadID,
 						() => {
-							economy.addMoney(senderID, 200);
-							economy.updateDailyTime(senderID, Date.now());
+							Economy.addMoney(senderID, 200);
+							Economy.updateDailyTime(senderID, Date.now());
 							modules.log("User: " + senderID + " nhận daily thành công!");
 						},
 						messageID
@@ -1479,7 +1432,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		if (contentMessage == `${prefix}work`) {
-			return economy.getWorkTime(senderID).then((lastWork) => {
+			return Economy.getWorkTime(senderID).then((lastWork) => {
 				let cooldown = 1200000;
 				if (lastWork !== null && cooldown - (Date.now() - lastWork) > 0) {
 					let time = ms(cooldown - (Date.now() - lastWork));
@@ -1507,27 +1460,22 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						"nội trợ",
 						"vả mấy thằng sao đỏ, giun vàng",
 						"bán hoa",
-						"tìm jav/hentai code cho SpermLord"
+						"tìm jav/hentai code cho SpermLord",
+						"chơi Yasuo trong rank và gánh team"
 					];
 					let amount = Math.floor(Math.random() * 400);
-					api.sendMessage(
-						"Bạn đã làm công việc " + job[Math.floor(Math.random() * job.length)] +
-						" và đã nhận được số tiền là: " + amount + " đô",
-						threadID,
-						() => {
-							economy.addMoney(senderID, parseInt(amount));
-							economy.updateWorkTime(senderID, Date.now());
-							modules.log("User: " + senderID + " nhận job thành công!");
-						},
-						messageID
-					);
+					api.sendMessage(`Bạn đã làm công việc: "${job[Math.floor(Math.random() * job.length)]}" và đã nhận được số tiền là: ${amount} đô`, threadID, () => {
+						Economy.addMoney(senderID, parseInt(amount));
+						Economy.updateWorkTime(senderID, Date.now());
+						modules.log("User: " + senderID + " nhận job thành công!");
+					}, messageID);
 				}
 			});
 		}
 
 		//roulette
 		if (contentMessage.indexOf(`${prefix}roul`) == 0) {
-			economy.getMoney(senderID).then((moneydb) => {
+			Economy.getMoney(senderID).then((moneydb) => {
 				var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
 				if (!content) return api.sendMessage(`Bạn chưa nhập thông tin đặt cược!`, threadID, messageID);
 				var string = content.split(" ");
@@ -1552,20 +1500,20 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				else if (!isOdd(random)) api.sendMessage("Màu 🖤", threadID, messageID);
 				if (random == 0 && color == 2) {
 					money *= 15;
-					api.sendMessage(`Bạn đã chọn màu 💚, bạn đã thắng với số tiền được nhân lên 15: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.addMoney(senderID, parseInt(money)), messageID);
+					api.sendMessage(`Bạn đã chọn màu 💚, bạn đã thắng với số tiền được nhân lên 15: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
 					modules.log(`${senderID} Won ${money} on green`);
 				}
 				else if (isOdd(random) && color == 1) {
 					money *= 1.5;
-					api.sendMessage(`Bạn đã chọn màu ❤️, bạn đã thắng với số tiền nhân lên 1.5: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.addMoney(senderID, parseInt(money)), messageID);
+					api.sendMessage(`Bạn đã chọn màu ❤️, bạn đã thắng với số tiền nhân lên 1.5: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
 					modules.log(`${senderID} Won ${money} on red`);
 				}
 				else if (!isOdd(random) && color == 0) {
 					money *= 2;
-					api.sendMessage(`Bạn đã chọn màu 🖤️, bạn đã thắng với số tiền nhân lên 2: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.addMoney(senderID, parseInt(money)), messageID);
+					api.sendMessage(`Bạn đã chọn màu 🖤️, bạn đã thắng với số tiền nhân lên 2: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
 					modules.log(`${senderID} Won ${money} on black`);
 				}
-				else api.sendMessage(`Bạn đã ra đê ở và mất trắng số tiền: ${money} đô. Số tiền hiện tại bạn có: ${moneydb}`, threadID, () => economy.subtractMoney(senderID, parseInt(money)), messageID);
+				else api.sendMessage(`Bạn đã ra đê ở và mất trắng số tiền: ${money} đô. Số tiền hiện tại bạn có: ${moneydb}`, threadID, () => Economy.subtractMoney(senderID, parseInt(money)), messageID);
 			});
 			return;
 		}
@@ -1573,7 +1521,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//slot
 		if (contentMessage.indexOf(`${prefix}sl`) == 0) {
 			const slotItems = ["🍇", "🍉", "🍊", "🍏", "7⃣", "🍓", "🍒", "🍌", "🥝", "🥑", "🌽"];
-			economy.getMoney(senderID).then((moneydb) => {
+			Economy.getMoney(senderID).then((moneydb) => {
 				var content = contentMessage.slice(prefix.length + 3, contentMessage.length);
 				if (!content) return api.sendMessage(`Bạn chưa nhập thông tin đặt cược!`, threadID, messageID);
 				var string = content.split(" ");
@@ -1593,8 +1541,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					money *= 2;
 					win = true;
 				}
-				if (win) api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thắng, toàn bộ ${money} đô thuộc về bạn. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => economy.addMoney(senderID, parseInt(money)), messageID);
-				else api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thua, toàn bộ ${money} đô bay vào không trung xD. Số tiền hiện tại bạn có: ${moneydb - money}`, threadID, () => economy.subtractMoney(senderID, parseInt(money)), messageID);
+				if (win) api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thắng, toàn bộ ${money} đô thuộc về bạn. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
+				else api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thua, toàn bộ ${money} đô bay vào không trung xD. Số tiền hiện tại bạn có: ${moneydb - money}`, threadID, () => Economy.subtractMoney(senderID, parseInt(money)), messageID);
 			});
 			return;
 		}
@@ -1604,7 +1552,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var mention = Object.keys(event.mentions)[0];
 			var content = contentMessage.slice(prefix.length + 4,contentMessage.length);
 			var moneyPay = content.substring(content.lastIndexOf(" ") + 1);
-			economy.getMoney(senderID).then((moneydb) => {
+			Economy.getMoney(senderID).then((moneydb) => {
 				if (!moneyPay) return api.sendMessage("Bạn chưa nhập số tiền cần chuyển!", threadID, messageID);
 				if (isNaN(moneyPay) || moneyPay.indexOf("-") !== -1) return api.sendMessage(`Số tiền bạn nhập không hợp lệ, vui lòng xem lại cách sử dụng tại ${prefix}help pay`, threadID, messageID);
 				if (moneyPay > moneydb) return api.sendMessage('Số tiền mặt trong người bạn không đủ, vui lòng kiểm tra lại số tiền bạn đang có!', threadID, messageID);
@@ -1621,8 +1569,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					},
 					threadID,
 					() => {
-						economy.addMoney(mention, parseInt(moneyPay));
-						economy.subtractMoney(senderID, parseInt(moneyPay));
+						Economy.addMoney(mention, parseInt(moneyPay));
+						Economy.subtractMoney(senderID, parseInt(moneyPay));
 					},
 					messageID
 				);
@@ -1637,7 +1585,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var sender = content.slice(0, content.lastIndexOf(" "));
 			var moneySet = content.substring(content.lastIndexOf(" ") + 1);
 			if (isNaN(moneySet)) return api.sendMessage('Số tiền cần set của bạn không phải là 1 con số!', threadID, messageID);
-			if (!mention && sender == 'me') return api.sendMessage("Đã sửa tiền của bản thân thành " + moneySet, threadID, () => economy.setMoney(senderID, parseInt(moneySet)), messageID);
+			if (!mention && sender == 'me') return api.sendMessage("Đã sửa tiền của bản thân thành " + moneySet, threadID, () => Economy.setMoney(senderID, parseInt(moneySet)), messageID);
 			api.sendMessage(
 				{
 					body: `Bạn đã sửa tiền của ${event.mentions[mention].replace("@", "")} thành ${moneySet} đô.`,
@@ -1649,7 +1597,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					]
 				},
 				threadID,
-				() => economy.setMoney(mention, parseInt(moneySet)),
+				() => Economy.setMoney(mention, parseInt(moneySet)),
 				messageID
 			);
 			return;
@@ -2008,8 +1956,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				checkCmd = stringSimilarity.findBestMatch(contentMessage.slice(prefix.length, findSpace), nocmdData.cmds);
 				if (checkCmd.bestMatch.target == contentMessage.slice(prefix.length, findSpace)) return;
 			}
-			if (checkCmd.bestMatch.rating == 0 || checkCmd.bestMatch.rating < 0.3) return;
-			return api.sendMessage(`Lệnh bạn nhập không tồn tại \n\n Ý bạn là lệnh "${prefix + checkCmd.bestMatch.target}" phải không?`, threadID, messageID);
+			if (checkCmd.bestMatch.rating < 0.3) return;
+			return api.sendMessage(`Lệnh bạn nhập không tồn tại.\nÝ bạn là lệnh "${prefix + checkCmd.bestMatch.target}" phải không?`, threadID, messageID);
 		}
 	}
 }

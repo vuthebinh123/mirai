@@ -10,7 +10,7 @@ const cmd = require('node-cmd');
 const __GLOBAL = new Object({
 	threadBlocked: new Array(),
 	userBlocked: new Array(),
-	unsend: new Array(),
+	messages: new Array(),
 	resendBlocked: new Array(),
 	NSFWBlocked: new Array()
 });
@@ -22,9 +22,9 @@ app.use(express.static(__dirname + '/config/dbviewer'));
 const listener = app.listen(process.env.PORT, () => logger("Đã mở tại port: " + listener.address().port), 0);
 
 setTimeout(() => {
-	console.log("refreshing!");
+	console.log("Đang làm mới!");
 	cmd.run("pm2 restart 0");
-}, process.env.TIME_RERESH || '600000');
+}, process.env.TIME_RERESH);
 
 var facebook = ({ Op, models }) => {
 	login({ appState: require(appStateFile) }, (error, api) => {

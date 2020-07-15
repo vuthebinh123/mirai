@@ -7,20 +7,6 @@
 		"group":"general"
 	},
 	{
-		"name":"mirai",
-		"decs":"Gọi mirai",
-		"usage":"mirai",
-		"example":"!mirai",
-		"group":"general"
-	},
-	{
-		"name":"lenny",
-		"decs":"( ͡° ͜ʖ ͡°)",
-		"usage":"lenny",
-		"example":"lenny",
-		"group":"general"
-	},
-	{
 		"name":"hug",
 		"decs":"Ôm người bạn tag",
 		"usage":"hug [tag người bạn cần ôm]",
@@ -39,20 +25,6 @@
 		"decs":"Tát người bạn tag",
 		"usage":"slap [tag người bạn cần tát]",
 		"example":"slap @Mirai-Chan",
-		"group":"general"
-	},
-	{
-		"name":"mlem",
-		"decs":"( ͡°👅 ͡°)",
-		"usage":"mlem",
-		"example":"mlem",
-		"group":"general"
-	},
-	{
-		"name":"idk",
-		"decs":"¯\\_(ツ)_/¯ ",
-		"usage":"idk",
-		"example":"idk",
 		"group":"general"
 	},
 	{
