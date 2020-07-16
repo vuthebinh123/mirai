@@ -1,6 +1,6 @@
 {
   "name": "ProjectMirai",
-  "version": "4.2.1",
+  "version": "4.2.2",
   "description": "Project Mirai sẽ biến tài khoản Facebook của bạn trở thành một con bot thú vị.",
   "main": "index.js",
   "scripts": {
@@ -58,6 +58,7 @@
     "request": "^2.88.2",
     "sagiri": "^1.5.2",
     "sequelize": "^5.21.6",
+    "simple-git": "^2.12.0",
     "sqlite3": "^4.2.0",
     "string-similarity": "^4.0.1",
     "text2png": "^2.3.0",
