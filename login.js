@@ -1,5 +1,5 @@
 const fs = require("fs-extra");
-const login = require("fca-unoffcial");
+const login = require("fca-unofficial");
 const readline = require("readline");
 
 var rl = readline.createInterface({

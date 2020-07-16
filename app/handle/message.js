@@ -27,14 +27,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 	}).catch(err => console.error(err));
 
 	/* ================ CronJob ==================== */
-	if (!fs.existsSync(__dirname + "/src/listCommands.json")) {
-		var template = [];
-		fs.writeFile(__dirname + "/src/listCommand.json", JSON.stringify(template), "utf-8", err => {
-			if (err) throw err;
-			modules.log("Tạo file listCommand mới thành công!");
-		});
-	}
-
 	if (!fs.existsSync(__dirname + "/src/groupID.json")) {
 		var data = [];
 		api.getThreadList(100, null, ["INBOX"], function(err, list) {
@@ -55,8 +47,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			if (!fs.existsSync(__dirname + "/src/listThread.json")) {
 				var firstJSON = {
 					wake: [],
-					sleep: [],
-					fact: []
+					sleep: []
 				};
 				fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(firstJSON));
 				modules.log("Tạo file listThread mới thành công!");
@@ -77,7 +68,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					}
 					fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(oldData));
 				});
-				if (timer == "08:05") fs.unlinkSync(__dirname + "/src/listThread.json");
+				if (timer == "23:05" || timer == "07:05") fs.unlinkSync(__dirname + "/src/listThread.json");
 				if (timer == "00:00")
 					if (resetNSFW == false) {
 						resetNSFW = true;

@@ -21,13 +21,8 @@
 Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành một con bot thông minh, nhanh nhẹn!
 
 ## Các thay đổi
-	- Quay lại fca-unofficial
-	- Cập nhật update.js (chắc đây sẽ là lần cập nhật cuối cho tới khi tìm được lỗi 🤔)
-	- Cập nhật simsimi (nó thành simsumi rồi ¯\_(ツ)_/¯)
-	- Cập nhật shortcut (giờ đây có thể tạo shortcut cho từng nhóm)
-	- Sửa rank_card.js
-	- Bỏ cột info trong database/user
-	- Bỏ Fact hàng ngày lúc 8 giờ sáng
+	- Sửa login.js
+	- Loại bỏ 1 số code thừa
 
 # Installation
 
