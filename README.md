@@ -21,8 +21,7 @@
 Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành một con bot thông minh, nhanh nhẹn!
 
 ## Các thay đổi
-	- Bổ sung simple-git vào trong package.json
-	- Loại bỏ TIME_REFRESH trong .env
+	- Sửa lỗi sim không nhận lệnh
 
 # Installation
 
