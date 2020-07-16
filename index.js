@@ -22,9 +22,9 @@ app.use(express.static(__dirname + '/config/dbviewer'));
 const listener = app.listen(process.env.PORT, () => logger("Đã mở tại port: " + listener.address().port), 0);
 
 setTimeout(() => {
-	console.log("Đang làm mới!");
+	console.log("Đang làm mới sau 10 phút!");
 	cmd.run("pm2 restart 0");
-}, process.env.TIME_RERESH);
+}, 600000);
 
 var facebook = ({ Op, models }) => {
 	login({ appState: require(appStateFile) }, (error, api) => {

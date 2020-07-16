@@ -22,6 +22,7 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 ## Các thay đổi
 	- Bổ sung simple-git vào trong package.json
+	- Loại bỏ TIME_REFRESH trong .env
 
 # Installation
 
