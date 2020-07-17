@@ -579,16 +579,20 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						}
 						addThis.shorts.push({ in: shortin, out: shortout });
 						oldData.push(addThis);
-						fs.writeFileSync(__dirname + "/src/shortcut.json", JSON.stringify(oldData));
-						return;
+						return fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => {
+							if (err) throw err;
+							api.sendMessage("Tạo shortcut mới thành công!", threadID, messageID);
+						});
 					}
-					let getShort = oldData.find(item => item.id == threadID);
-					if (getShort.shorts.some(item => item.in == shortin)) return api.sendMessage("Shortcut này đã tồn tại trong group này!", threadID, messageID);
-					getShort.shorts.push({ in: shortin, out: shortout });
-					fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => {
-						if (err) throw err;
-						api.sendMessage("Tạo shortcut mới thành công!", threadID, messageID);
-					});
+					else {
+						let getShort = oldData.find(item => item.id == threadID);
+						if (getShort.shorts.some(item => item.in == shortin)) return api.sendMessage("Shortcut này đã tồn tại trong group này!", threadID, messageID);
+						getShort.shorts.push({ in: shortin, out: shortout });
+						return fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => {
+							if (err) throw err;
+							api.sendMessage("Tạo shortcut mới thành công!", threadID, messageID);
+						});
+					}
 				});
 			}
 		}
