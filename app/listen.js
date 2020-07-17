@@ -1,6 +1,5 @@
 const modules = require("./modules");
 const config = require("../config");
-const fs = require('fs-extra');
 module.exports = function({ api, models, __GLOBAL }) {
 	const User = require("./controllers/user")({ models, api });
 	const Thread = require("./controllers/thread")({ models, api });

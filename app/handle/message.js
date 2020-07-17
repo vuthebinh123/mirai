@@ -295,14 +295,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}noti`) == 0 && admins.includes(senderID)) {
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
 			if (!content) return api.sendMessage("Nhập thông tin vào!", threadID, messageID);
-			api.getThreadList(100, null, ["INBOX"], function(err, list) {
+			return api.getThreadList(100, null, ["INBOX"], (err, list) => {
 				if (err) throw err;
-				list.forEach(item => {
-					if (item.isGroup == true && item.threadID != threadID) api.sendMessage(content, item.threadID);
-				});
-				modules.log("Gửi thông báo mới thành công!");
+				list.forEach(item => (item.isGroup == true && item.threadID != threadID) ? api.sendMessage(content, item.threadID) : '');
+				api.sendMessage('Đã gửi thông báo với nội dung:\n' + content, threadID, messageID);
 			});
-			return;
 		}
 
 		//giúp thành viên thông báo lỗi về admin
@@ -310,15 +307,15 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
 			if (!content) return api.sendMessage("Có vẻ như bạn chưa nhập thông tin, vui lòng nhập thông tin lỗi mà bạn gặp!", threadID, messageID);
 			(async () => {
-				var userName = await User.getName(senderID)
-				var threadName = await Thread.getName(threadID)
+				var userName = await User.getName(senderID);
+				var threadName = await Thread.getName(threadID);
 				api.sendMessage(
 					"Báo cáo từ: " + userName +
 					"\nGroup gặp lỗi: " + threadName +
 					"\nLỗi gặp phải: " + content +
 					"\nThời gian báo: " + moment.tz("Asia/Ho_Chi_Minh").format("HH:mm:ss"),
 					admins[0]
-				)
+				);
 			})()
 			return api.sendMessage("Thông tin lỗi của bạn đã được gửi về admin!", threadID, messageID);
 		}
@@ -401,10 +398,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			if (content.length == 0) {
 				var helpGroup = [];
 				var helpMsg = "";
-				helpList.forEach(help => {
-					if (!helpGroup.some(item => item.group == help.group)) helpGroup.push({ group: help.group, cmds: [help.name] });
-					else helpGroup.find(item => item.group == help.group).cmds.push(help.name);
-				});
+				helpList.forEach(help => (!helpGroup.some(item => item.group == help.group)) ? helpGroup.push({ group: help.group, cmds: [help.name] }) : helpGroup.find(item => item.group == help.group).cmds.push(help.name));
 				helpGroup.forEach(help => helpMsg += `===== ${help.group.charAt(0).toUpperCase() + help.group.slice(1)} =====\n${help.cmds.join(', ')}\n\n`);
 				return api.sendMessage(helpMsg, threadID, messageID);
 			}
@@ -664,9 +658,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var object = {};
 			if (option.length == 1 && option[0].includes(' |')) option[0] = option[0].replace(' |', '');
 			for (var i = 0; i < option.length; i++) object[option[i]] = false;
-			return api.createPoll(title, threadID, object, (err) => {
-				if (err) api.sendMessage("Có lỗi xảy ra vui lòng thử lại", threadID, messageID)
-			});
+			return api.createPoll(title, threadID, object, (err) => (err) ? api.sendMessage("Có lỗi xảy ra vui lòng thử lại", threadID, messageID) : '');
 		}
 
 		//rainbow
@@ -881,23 +873,20 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var time = process.uptime();
 			var minutes = Math.floor((time % (60 * 60)) / 60);
 			var seconds = Math.floor(time % 60);
-			api.sendMessage(
+			return api.sendMessage(
 				"Bot đã hoạt động được " +
 				minutes + " phút " +
 				seconds + " giây." +
 				"\nLưu ý: Bot sẽ tự động restart sau khi 10 phút hoạt động!",
 				threadID, messageID
 			);
-			return;
 		}
 
 		//unsend message
 		if (contentMessage.indexOf(`${prefix}gỡ`) == 0) {
 			if (event.messageReply.senderID != api.getCurrentUserID()) return api.sendMessage("Không thể gỡ tin nhắn của người khác", threadID, messageID);
 			if (event.type != "message_reply") return api.sendMessage("Phản hồi tin nhắn cần gỡ", threadID, messageID);
-			return api.unsendMessage(event.messageReply.messageID, err => {
-				if (err) api.sendMessage("Không thể gỡ tin nhắn này vì đã quá 10 phút!", threadID, messageID);
-			});
+			return api.unsendMessage(event.messageReply.messageID, err => (err) ? api.sendMessage("Không thể gỡ tin nhắn này vì đã quá 10 phút!", threadID, messageID) : '');
 		}
 
 		//get uid
@@ -920,11 +909,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				content = contentMessage.slice(prefix.length + 9, contentMessage.length);
 			}
 			if (!content) return api.sendMessage("Nhập thứ cần tìm!", threadID, messageID);
-			wiki({apiUrl: url}).page(content).catch((err) => api.sendMessage("Không tìm thấy " + content, threadID, messageID)).then(page => {
-				if (typeof page == 'undefined') return;
-				Promise.resolve(page.summary()).then(val => api.sendMessage(val, threadID, messageID));
-			});
-			return;
+			return wiki({apiUrl: url}).page(content).catch((err) => api.sendMessage("Không tìm thấy " + content, threadID, messageID)).then(page => (typeof page != 'undefined') ? Promise.resolve(page.summary()).then(val => api.sendMessage(val, threadID, messageID)) : '');
 		}
 
 		//ping
@@ -1106,11 +1091,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				let tagList = [];
 				let artistList = [];
 				let characterList = [];
-				codeData.tags.forEach(item => {
-					if (item.type == "tag") tagList.push(item.name);
-					else if (item.type == "artist") artistList.push(item.name);
-					else if (item.type == 'character') characterList.push(item.name);
-				});
+				codeData.tags.forEach(item => (item.type == "tag") ? tagList.push(item.name) : (item.type == "artist") ? artistList.push(item.name) : (item.type == "character") ? characterList.push(item.name) : '');
 				var tags = tagList.join(', ');
 				var artists = artistList.join(', ');
 				var characters = characterList.join(', ');
@@ -1369,7 +1350,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//coinflip
 		if (contentMessage.indexOf(`${prefix}coinflip`) == 0) {
-			if (Math.floor(Math.random() * Math.floor(2)) === 0) return api.sendMessage("Mặt ngửa!", threadID, messageID);
+			if (Math.floor(Math.random() * 2) === 0) return api.sendMessage("Mặt ngửa!", threadID, messageID);
 			else return api.sendMessage("Mặt sấp!", threadID, messageID);
 		}
 
@@ -1398,7 +1379,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//daily gift
 		if (contentMessage.indexOf(`${prefix}daily`) == 0) {
-			let cooldown = 8.64e7; //86400000
+			let cooldown = 8.64e7;
 			Economy.getDailyTime(senderID).then((lastDaily) => {
 				if (lastDaily !== null && cooldown - (Date.now() - lastDaily) > 0) {
 					let time = ms(cooldown - (Date.now() - lastDaily));
@@ -1878,7 +1859,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
 			});
 
-		//slap
+		//tát
 		if (contentMessage.indexOf(`${prefix}slap`) == 0 && contentMessage.indexOf('@') !== -1)
 			return request('https://nekos.life/api/v2/img/slap', (err, response, body) =>{
 				let picData = JSON.parse(body);
@@ -1916,9 +1897,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					let results = {
 						thumbnail: data.original.header.thumbnail,
 						similarity: data.similarity,
-						material: data.original.data.material || 'none',
-						characters: data.original.data.characters || 'none',
-						creator: data.original.data.creator || 'none',
+						material: data.original.data.material || 'Không có',
+						characters: data.original.data.characters || 'Original',
+						creator: data.original.data.creator || 'Không biết',
 						site: data.site,
 						url: data.url
 					};
@@ -1934,7 +1915,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							'- Original site: ' + results.site + ' - ' + results.url,
 							threadID, messageID
 						);
-					} else api.sendMessage(`Không thấy kết quả nào trùng với ảnh bạn đang tìm kiếm :'(`, threadID, messageID);
+					}
+					else api.sendMessage(`Không thấy kết quả nào trùng với ảnh bạn đang tìm kiếm :'(`, threadID, messageID);
 				});
 			}
 		}
@@ -1951,8 +1933,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				checkCmd = stringSimilarity.findBestMatch(contentMessage.slice(prefix.length, findSpace), nocmdData.cmds);
 				if (checkCmd.bestMatch.target == contentMessage.slice(prefix.length, findSpace)) return;
 			}
-			if (checkCmd.bestMatch.rating < 0.3) return;
-			return api.sendMessage(`Lệnh bạn nhập không tồn tại.\nÝ bạn là lệnh "${prefix + checkCmd.bestMatch.target}" phải không?`, threadID, messageID);
+			if (checkCmd.bestMatch.rating >= 0.3) return api.sendMessage(`Lệnh bạn nhập không tồn tại.\nÝ bạn là lệnh "${prefix + checkCmd.bestMatch.target}" phải không?`, threadID, messageID);
 		}
 	}
 }

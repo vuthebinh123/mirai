@@ -21,7 +21,8 @@
 Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành một con bot thông minh, nhanh nhẹn!
 
 ## Các thay đổi
-	- Sửa lỗi sim không nhận lệnh
+	- 4.2.5: Sửa shortcut không thông báo sau lần đầu tạo file.
+	- 4.2.6: Tối ưu lại code
 
 # Installation
 

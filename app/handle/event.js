@@ -20,7 +20,7 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 						User.createUser(uid);
 						User.getName(uid).then(name => {
 							api.sendMessage({
-								body: "Chào mừng " + name + " đã vào group",
+								body: "Chào mừng " + name + " đã vào group.",
 								mentions: [
 									{
 										tag: name,
@@ -33,7 +33,7 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 				}
 				break;
 			case "log:unsubscribe":
-				User.getName(event.logMessageData.leftParticipantFbId).then(name => api.sendMessage(name + " đã mãi mãi đi xa.", event.threadID));
+				User.getName(event.logMessageData.leftParticipantFbId).then(name => api.sendMessage(name + " đã mãi mãi rời xa.", event.threadID));
 				break;
 			case "log:thread-icon":
 				break;
