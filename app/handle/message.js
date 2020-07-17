@@ -354,19 +354,19 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 			let stringIndexOf = string.indexOf(" | ");
 			let name = string.slice(0, stringIndexOf);
-			let center = string.slice(stringIndexOf + 1, string.length);
+			let center = string.slice(stringIndexOf + 3, string.length);
 
 			let stringIndexOf2 = center.indexOf(" | ");
 			let decs = center.slice(0, stringIndexOf2);
-			let stringNext = center.slice(stringIndexOf2 + 1, center.length);
+			let stringNext = center.slice(stringIndexOf2 + 3, center.length);
 
 			let stringIndexOf3 = stringNext.indexOf(" | ");
 			let usage = stringNext.slice(0, stringIndexOf3);
-			let stringNext2 = stringNext.slice(stringIndexOf3 + 1, stringNext.length);
+			let stringNext2 = stringNext.slice(stringIndexOf3 + 3, stringNext.length);
 
 			let stringIndexOf4 = stringNext2.indexOf(" | ");
 			let example = stringNext2.slice(0, stringIndexOf4);
-			let group = stringNext2.slice(stringIndexOf4 + 1, stringNext2.length);
+			let group = stringNext2.slice(stringIndexOf4 + 3, stringNext2.length);
 
 			var oldDataJSON = JSON.parse(fs.readFileSync(__dirname + "/src/listCommands.json"));
 			var pushJSON = {
@@ -378,7 +378,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			};
 			oldDataJSON.push(pushJSON);
 			fs.writeFileSync(__dirname + "/src/listCommands.json", JSON.stringify(oldDataJSON));
-			return api.sendMessage("Đã ghi xong!", threadID, messageID);
+			return api.sendMessage("Ghi lệnh hoàn tất!", threadID, messageID);
 		}
 
 		//delete lệnh trong help
@@ -386,8 +386,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var string = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			var oldDataJSON = JSON.parse(fs.readFileSync(__dirname + "/src/listCommands.json"));
 			const index = oldDataJSON.findIndex(x => x.name === string);
-			if (index !== undefined) oldDataJSON.splice(index, 1);
-			fs.writeFile(__dirname + "/src/listCommands.json", JSON.stringify(oldDataJSON));
+			if (index != undefined) oldDataJSON.splice(index, 1);
+			fs.writeFileSync(__dirname + "/src/listCommands.json", JSON.stringify(oldDataJSON));
 			return api.sendMessage("Xóa lệnh hoàn tất!", threadID, messageID);
 		}
 
