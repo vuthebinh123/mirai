@@ -12,12 +12,12 @@ try {
 }
 
 var args = process.argv.slice(2);
-if (args.length > 1) return console.error('Updater chỉ nhận 1 đối số duy nhất là "--force".');
+if (args.length > 1 || args[0] != '--force') return console.error('Updater chỉ nhận 1 đối số duy nhất là "--force".');
 if (args[0] == '--force') isForce = true;
 
 (async () => {
-	if (!fs.existsSync('./.needUpdate') && isForce == false) return console.log('[!] Bạn đang sử dụng phiên bản mới nhất! [!]');
-	else if (isForce == true) console.log('[!] Đã bật bắt buộc cập nhật [!]');
+	if (!fs.existsSync('./.needUpdate') && !isForce) return console.log('[!] Bạn đang sử dụng phiên bản mới nhất! [!]');
+	else if (isForce) console.log('[!] Đã bật bắt buộc cập nhật [!]');
 	cmd.run('pm2 stop 0');
 	if (process.env.API_SERVER_EXTERNAL == 'https://api.glitch.com') isGlitch = true;
 	if (isGlitch) console.log('-> Bạn đang chạy bot trên Glitch. Updater sẽ tự tối giản các bước làm vì Glitch đã có sẵn chức năng tự động cài modules.');
@@ -40,7 +40,7 @@ async function backup() {
 	if (fs.existsSync('./config/data.sqlite')) fs.copySync('./config/data.sqlite', './tmp/data.sqlite');
 	if (fs.existsSync('./config/index.js')) fs.copySync('./config/index.js', './tmp/config.js');
 	if (fs.existsSync('./index.js')) fs.copySync('./index.js', './tmp/index.js');
-	if (fs.existsSync('./.env')) fs.copySync('./.env', './tmp/.env');
+	if (fs.existsSync('./.env')) fs.copySync('./.env', './tmp/.env.old');
 }
 
 async function clean() {
