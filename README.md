@@ -25,6 +25,7 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 	- 4.2.6: Tối ưu lại code.
 	- 4.2.7: Sửa sethelp và delhelp.
 	- 4.2.8: Sửa lỗi update.js không sao lưu .env
+	- 4.2.9: Sửa event.js
 
 # Installation
 

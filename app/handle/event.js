@@ -12,7 +12,7 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 				for (var i = 0; i < event.logMessageData.addedParticipants.length; i++) {
 					if (event.logMessageData.addedParticipants[i].userFbId == api.getCurrentUserID()) {
 						Thread.createThread(event.threadID);
-						api.sendMessage(`Đã kết nối thành công!\nVui lòng sử dụng ${prefix}help để biết thêm chi tiết lệnh >w<`, event.threadID);
+						api.sendMessage(`Đã kết nối thành công!\nVui lòng sử dụng ${config.prefix}help để biết thêm chi tiết lệnh >w<`, event.threadID);
 						api.changeNickname(config.botName, event.threadID, api.getCurrentUserID());
 					}
 					else {

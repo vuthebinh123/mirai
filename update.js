@@ -45,9 +45,7 @@ async function backup() {
 
 async function clean() {
 	console.log('-> Đang xóa bản cũ');
-	fs.readdirSync('.').forEach(item => {
-		if (item != 'tmp') fs.removeSync(item);
-	});
+	fs.readdirSync('.').forEach(item => (item != 'tmp') ? fs.removeSync(item) : '');
 }
 
 function clone() {
