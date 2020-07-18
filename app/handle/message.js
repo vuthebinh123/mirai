@@ -99,7 +99,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		let { body: contentMessage, senderID, threadID, messageID } = event;
 		senderID = parseInt(senderID);
 		threadID = parseInt(threadID);
-		messageID = messageID.toString();
 
 		if (__GLOBAL.userBlocked.includes(senderID)) return;
 		User.createUser(senderID);
@@ -1655,7 +1654,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			if (!content) return api.sendMessage("Bạn chưa nhập thông tin cần thiết!", threadID, messageID);
 			if (content.indexOf('https') == -1 || content.indexOf('http') == -1) {
 				request(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&key=${googleSearch}&q=${encodeURIComponent(content)}`, (err, response, body) => {
-					if (err) return api.sendMessage("Lỗi rồi :|", threadID, messageID);;
+					if (err) return api.sendMessage("Đã có lỗi xảy ra!", threadID, messageID);;
 					var retrieve = JSON.parse(body);
 					var content = "https://www.youtube.com/watch?v=" + retrieve.items[0].id.videoId;
 					var title = retrieve.items[0].snippet.title;
