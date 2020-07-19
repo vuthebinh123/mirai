@@ -4,8 +4,7 @@ module.exports = function({ api, __GLOBAL, User }) {
 		var getMsg = __GLOBAL.messages.find(item => item.msgID == event.messageID);
 		User.getName(event.senderID).then(name => {
 			let msg;
-			if (getMsg.msgBody == '') msg = ' vừa gỡ một tệp đính kèm.';
-			else msg = ' vừa gỡ một tin nhắn:\n' + getMsg.msgBody;
+			(getMsg.msgBody == '') ? msg = ' vừa gỡ một tệp đính kèm.' : msg = ' vừa gỡ một tin nhắn:\n' + getMsg.msgBody;
 			if (event.senderID != api.getCurrentUserID())
 				return api.sendMessage({
 					body: name + msg,

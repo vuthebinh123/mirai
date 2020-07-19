@@ -27,6 +27,7 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 	- 4.2.8: Sửa lỗi update.js không sao lưu .env
 	- 4.2.9: Sửa event.js
 	- 4.2.10: Xóa messageID.tostring() (do message đã là string sẵn rồi, lag quá @@)
+	- 4.2.11: Bật lệnh hentaivn và sửa lệnh rank
 
 # Installation
 

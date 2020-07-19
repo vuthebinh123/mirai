@@ -782,8 +782,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//ramdom con số
 		if (contentMessage.indexOf(`${prefix}roll`) == 0) {
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
+			if (!content) return api.sendMessage(`uwu con số đẹp nhất em chọn được là: ${Math.floor(Math.random() * 99)}`, threadID, messageID);
 			var splitContent = content.split(" ");
-			if (splitContent == '') return api.sendMessage(`uwu con số đẹp nhất em chọn được là: ${Math.floor(Math.random() * 99)}`, threadID, messageID);
 			if (splitContent.length != 2) return api.sendMessage(`Sai format, bạn hãy đọc hướng dẫn trong ${prefix}help roll để biết thêm chi tiết.`, threadID, messageID)
 			var min = parseInt(splitContent[0]);
 			var max = parseInt(splitContent[1]);
@@ -816,7 +816,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				for (var i = 0; i < Object.keys(event.mentions).length; i++) {
 					let uid = Object.keys(event.mentions)[i];
 					(async () => {
-						let name = await User.getName(senderID);
+						let name = await User.getName(uid);
 						Rank.getPoint(uid).then(point => createCard({ id: uid, name, ...point })).then(path => {
 							api.sendMessage(
 								{
@@ -1110,7 +1110,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//hentaivn
 		if (contentMessage.indexOf(`${prefix}hentaivn -i`) == 0) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
-			return api.sendMessage('Hiện tại HentaiVN đã đổi cách hoạt động của trang: Kiểm tra trình duyệt + IP hợp lệ và phải qua bước xác thực bằng hình ảnh thì mới cho vào.\nHiện tại SpermLord vẫn chưa tìm ra cách vượt, nên sẽ tạm thời tắt tính năng này.', threadID, messageID);
 			const cheerio = require('cheerio');
 			var id = contentMessage.slice(prefix.length + 12, contentMessage.length);
 			if (!id) return api.sendMessage("Nhập id!", threadID, messageID);
@@ -1348,10 +1347,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		/* ==================== Economy and Minigame Commands ==================== */
 
 		//coinflip
-		if (contentMessage.indexOf(`${prefix}coinflip`) == 0) {
-			if (Math.floor(Math.random() * 2) === 0) return api.sendMessage("Mặt ngửa!", threadID, messageID);
-			else return api.sendMessage("Mặt sấp!", threadID, messageID);
-		}
+		if (contentMessage.indexOf(`${prefix}coinflip`) == 0) return (Math.random() > 0.5) ? api.sendMessage("Mặt ngửa!", threadID, messageID) : api.sendMessage("Mặt sấp!", threadID, messageID);
 
 		//money
 		if (contentMessage.indexOf(`${prefix}money`) == 0) {
