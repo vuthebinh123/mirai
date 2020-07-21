@@ -21,6 +21,8 @@
 Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành một con bot thông minh, nhanh nhẹn!
 
 ## Các thay đổi
+<details>
+	<summary>Đây là các log thay đổi qua từng phiên bản</summary>
 	- 4.2.5: Sửa shortcut không thông báo sau lần đầu tạo file.
 	- 4.2.6: Tối ưu lại code.
 	- 4.2.7: Sửa sethelp và delhelp.
@@ -28,7 +30,9 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 	- 4.2.9: Sửa event.js
 	- 4.2.10: Xóa messageID.tostring() (do messageID đã là string sẵn rồi, lag quá @@)
 	- 4.2.11: Bật lệnh hentaivn và sửa lệnh rank
+	- 4.3.0: lượt bớt một số lệnh không cần thiết, thay đổi echo thành repeat, thay đổi saucenao thành sauce, thêm cài đặt thời gian cho việc nhắc đi ngủ và thức dậy, nâng cấp và sửa chữa saucenao, loại bỏ acronym
 
+</details>
 # Installation
 
 ## Yêu cầu:
@@ -46,7 +50,7 @@ git clone https://github.com/roxtigger2003/mirai
 cd mirai && mv -f .env.example .env && npm install
 ```
 sau khi xong các dòng lệnh trên bạn hãy mở file env và edit nó
-+ Step 3: Login vào tài khoản Facebook của bạn qua email và password trong file .env (nếu bạn có bật xác thực 2 bước, hãy nhanh tay gõ mã xác thực trong vòng 5s):
++ Step 3: Login vào tài khoản Facebook của bạn qua email và password trong file .env:
 ```bash
 node login.js
 ```

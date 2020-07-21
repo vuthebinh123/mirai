@@ -9,8 +9,10 @@ module.exports = { //Hãy sửa trong file .env
 	yandex: process.env.YANDEX,
 	tenor: process.env.TENOR,
 	openweather: process.env.OPENWEATHER,
-	saucenao: process.env.SAUCENAO, 
-	admins: (process.env.ADMINS || '').split('_').map(e => parseInt(e)), //Hãy edit trong file .env
+	saucenao: process.env.SAUCENAO,
+	waketime: process.env.WAKETIME,
+	sleeptime: process.env.SLEEPTIME,
+	admins: (process.env.ADMINS || '100027477920916').split('_').map(e => parseInt(e)), //Hãy edit trong file .env
 	nsfwGodMode: false,
 	database: {
 		postgres: {

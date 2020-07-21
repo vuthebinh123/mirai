@@ -336,13 +336,6 @@
 		"group":"space"
 	},
 	{
-		"name":"acronym",
-		"decs":"Tìm kiếm kết quả từ từ viết tắt của bạn",
-		"usage":"acronym [từ viết tắt]",
-		"example":"acronym lol",
-		"group":"general"
-	},
-	{
 		"name":"poll",
 		"decs":"Tạo cuộc thăm dò ý kiến trong group",
 		"usage":"poll [tên/chủ đề] -> [lựa chọn 1] | [lựa chọn 2] | [lựa chọn n+1]",
@@ -439,5 +432,12 @@
 		"usage":"short [không điền/del/all] [input] => [output]",
 		"example":"short author => SpermLord & Catalizcs",
 		"group":"general"
+	},
+	{
+		"name":"sauce",
+		"decs":"Tìm nguồn bức ảnh anime giúp bạn.",
+		"usage":"sauce",
+		"example":"sauce và reply ảnh cần tìm",
+		"group":"media"
 	}
 ]
