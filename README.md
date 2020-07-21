@@ -35,13 +35,15 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.2.9: Sửa event.js
 
-- 4.2.10: Xóa messageID.tostring() (do messageID đã là string sẵn rồi, lag quá @@)
+- 4.2.10: Xóa messageID.tostring()
 
 - 4.2.11: Bật lệnh hentaivn và sửa lệnh rank
 
-- 4.3.0: lượt bớt một số lệnh không cần thiết, thay đổi echo thành repeat, thay đổi saucenao thành sauce, thêm cài đặt thời gian cho việc nhắc đi ngủ và thức dậy, nâng cấp và sửa chữa saucenao, loại bỏ acronym
+- 4.3.0: Loại bỏ một số lệnh không cần thiết, echo -> repeat, saucenao -> sauce, thêm cài đặt thời gian cho việc nhắc đi ngủ và thức dậy, nâng cấp và sửa chữa saucenao, loại bỏ acronym
 
-- 4.3.1: fix ping
+- 4.3.1: Fix ping
+
+- 4.3.2: Đổi lại SLEEPTIME và WAKETIME
 
 </details>
 
