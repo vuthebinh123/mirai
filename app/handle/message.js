@@ -1191,29 +1191,19 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//ping
 		if (contentMessage == `${prefix}ping`)
-			return api.getThreadInfo(threadID, function(err, info) {
-				if (err) throw err;
-				let ids = info.participantIDs;
-				let botid = api.getCurrentUserID();
-				let callid = {
-					body: "Ping🏓",
-					mentions: [
-						{
-							tag: `${botid}`,
-							id: botid
-						}
-					]
-				};
-				ids.forEach(getid => {
+			return api.getThreadInfo(threadID, (err, info) => {
+				if (err) return api.sendMessage("Đã có lỗi xảy ra", threadID, messageID);
+				var icons = ["🥂", "🎉", "🌏", "💥", "💖", "👏🏿"];
+				var ids = info.participantIDs;
+				var botid = api.getCurrentUserID();
+				var callid = { body: "Ping" + icons[Math.floor(Math.random() * icons.length)], mentions: [{ tag: `${botid}`, id: botid }] };
+				ids.forEach(id => {
 					if (id != botid) {
-						var addthis = {
-							tag: `${id}`,
-							id: id
-						}
-						callid["mentions"].push(addthis);
+					var addthis = { tag: `${id}`, id: id };
+					callid["mentions"].push(addthis);
 					}
 				});
-				api.sendMessage(callid, threadID, messageID);
+				 api.sendMessage(callid, threadID, messageID);
 			});
 
 		//look earth
