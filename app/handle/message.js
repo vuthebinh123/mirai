@@ -767,22 +767,19 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			});
 
 		//sauce
-		if (contentMessage.indexOf(`${prefix}sauce`) == 0) {
+		if (contentMessage == `${prefix}sauce`) {
+			const sagiri = require('sagiri'), search = sagiri(saucenao);
 			if (event.type != "message_reply") return api.sendMessage(`Vui lòng bạn reply bức ảnh cần phải tìm!`, threadID, messageID);
 			if (event.messageReply.attachments.length > 1) return api.sendMessage(`Vui lòng reply chỉ một ảnh!`, threadID, messageID);
 			if (event.messageReply.attachments[0].type == 'photo') {
 				if (saucenao == '' || typeof saucenao == 'undefined') return api.sendMessage(`Chưa có api của saucenao!`, threadID, messageID);
-				var imgURL = event.messageReply.attachments[0].url;
-				const sagiri = require('sagiri'),
-				search = sagiri(saucenao);
-				return search(imgURL).then(response => {
+				return search(event.messageReply.attachments[0].url).then(response => {
 					let data = response[0];
 					let results = {
-						thumbnail: data.thumbnail,
 						similarity: data.similarity,
-						material: data.raw.data.material || 'không có',
-						characters: data.raw.data.characters || 'không có',
-						creator: data.raw.data.creator || 'không có',
+						material: data.raw.data.material || 'Không có',
+						characters: data.raw.data.characters || 'Original',
+						creator: data.raw.data.creator || 'Không biết',
 						site: data.site,
 						url: data.url
 					};
@@ -917,17 +914,17 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//prefix
-		if (contentMessage.indexOf(`prefix`) == 0) return api.sendMessage(`Prefix là: ${prefix}`, threadID, messageID);
+		if (contentMessage == 'prefix') return api.sendMessage(`Prefix là: ${prefix}`, threadID, messageID);
 
 		//credits
-		if (contentMessage.indexOf("credits") == 0) return api.sendMessage("Project Mirai được thực hiện bởi:\nSpermLord: https://fb.me/MyNameIsSpermLord\nCatalizCS: https://fb.me/Cataliz2k\nFull source code at: https://github.com/roxtigger2003/mirai", threadID, messageID);
+		if (contentMessage == "credits") return api.sendMessage("Project Mirai được thực hiện bởi:\nSpermLord: https://fb.me/MyNameIsSpermLord\nCatalizCS: https://fb.me/Cataliz2k\nFull source code at: https://github.com/roxtigger2003/mirai", threadID, messageID);
 
 		//simsimi
 		if (contentMessage.indexOf(`${prefix}sim`) == 0) return request(`https://simsumi.herokuapp.com/api?text=${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}&lang=vi`, (err, response, body) => api.sendMessage((JSON.parse(body).success != '') ? JSON.parse(body).success : 'Không có câu trả nời nào.', threadID, messageID));
 
 		//random màu cho theme chat
 		if (contentMessage == `${prefix}randomcolor`) {
-			var color = ['196241301102133','169463077092846','2442142322678320', '234137870477637', '980963458735625','175615189761153','2136751179887052', '2058653964378557','2129984390566328','174636906462322','1928399724138152','417639218648241','930060997172551','164535220883264','370940413392601','205488546921017','809305022860427'];
+			var color = ['196241301102133', '169463077092846', '2442142322678320', '234137870477637', '980963458735625', '175615189761153', '2136751179887052', '2058653964378557', '2129984390566328', '174636906462322', '1928399724138152', '417639218648241', '930060997172551', '164535220883264', '370940413392601', '205488546921017', '809305022860427'];
 			return api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID, (err) => {
 				if (err) return api.sendMessage('Đã có lỗi không mong muốn đã xảy ra', threadID, messageID);
 			});
@@ -950,7 +947,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var value = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			if (isNaN(value)) return api.sendMessage('Dữ liệu không phải là một con số', threadID, messageID);
 			if (value > 50) return api.sendMessage('Dữ liệu phải nhỏ hơn 50!', threadID, messageID);
-			var color = ['196241301102133','169463077092846','2442142322678320', '234137870477637', '980963458735625','175615189761153','2136751179887052', '2058653964378557','2129984390566328','174636906462322','1928399724138152','417639218648241','930060997172551','164535220883264','370940413392601','205488546921017','809305022860427'];
+			var color = ['196241301102133', '169463077092846', '2442142322678320', '234137870477637', '980963458735625', '175615189761153', '2136751179887052', '2058653964378557', '2129984390566328', '174636906462322', '1928399724138152', '417639218648241', '930060997172551', '164535220883264', '370940413392601', '205488546921017', '809305022860427'];
 			for (var i = 0; i < value; i++) api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID);
 			return;
 		}
@@ -1037,8 +1034,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					"\n- Nhiễm: " + data.data.vietnam.cases +
 					"\n- Chết: " + data.data.vietnam.deaths +
 					"\n- Phục hồi: " + data.data.vietnam.recovered,
-					threadID,
-					messageID
+					threadID, messageID
 				);
 			});
 
@@ -1053,15 +1049,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//waifu
 		if (contentMessage == `${prefix}waifu`) {
 			var route = Math.round(Math.random() * 10);
-			if (route == 1 || route == 0 || route == 3) {
-				api.sendMessage("Dạ em sẽ làm vợ anh <3", threadID, messageID);
-				api.sendMessage("Yêu chàng nhiều <3", threadID, messageID);
-				return;
-			}
-			else if (route == 2 || route > 4) {
-				api.sendMessage("Chúng ta chỉ là bạn thôi :'(", threadID, messageID);
-				return;
-			}
+			if (route == 1 || route == 0 || route == 3) return api.sendMessage("Dạ em sẽ làm vợ anh <3\nYêu chàng nhiều <3", threadID, messageID);
+			else if (route == 2 || route > 4) return api.sendMessage("Chúng ta chỉ là bạn thôi :'(", threadID, messageID);
 		}
 
 		//ramdom con số
@@ -1078,7 +1067,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//Khiến bot nhái lại tin nhắn bạn
-		if (contentMessage.indexOf(`${prefix}repeat`) == 0) return api.sendMessage(contentMessage.slice(prefix.length + 5, contentMessage.length), threadID);
+		if (contentMessage.indexOf(`${prefix}echo`) == 0) return api.sendMessage(contentMessage.slice(prefix.length + 5, contentMessage.length), threadID);
 
 		//rank
 		if (contentMessage.indexOf(`${prefix}rank`) == 0) {
@@ -1134,11 +1123,10 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return request(encodeURI(`https://translate.yandex.net/api/v1.5/tr.json/translate?key=${yandex}&text=${translateThis}&lang=${lang}`), (err, response, body) => {
 				if (err) return api.sendMessage("Đã có lỗi xảy ra!", threadID, messageID)
 				var retrieve = JSON.parse(body);
-				var convert = retrieve.text[0];
 				var splitLang = retrieve.lang.split("-");
 				var fromLang = splitLang[0];
 				api.sendMessage(
-					`Bản dịch: ${convert}\n` +
+					`Bản dịch: ${retrieve.text[0]}\n` +
 					`${fromLang} -> ${lang}`,
 					threadID, messageID
 				);
@@ -1207,7 +1195,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			});
 
 		//look earth
-		if (contentMessage.indexOf(`${prefix}earth`) == 0)
+		if (contentMessage == `${prefix}earth`)
 			return request(`https://api.nasa.gov/EPIC/api/natural/images?api_key=DEMO_KEY`, (err, response, body) => {
 				if (err) throw err;
 				var jsonData = JSON.parse(body);
@@ -1230,7 +1218,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			});
 
 		//localtion iss
-		if (contentMessage.indexOf(`${prefix}iss`) == 0) {
+		if (contentMessage == `${prefix}iss`) {
 			return request(`http://api.open-notify.org/iss-now.json`, (err, response, body) => {
 				if (err) throw err;
 				var jsonData = JSON.parse(body);
@@ -1242,7 +1230,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//near-earth obj
-		if (contentMessage.indexOf(`${prefix}neo`) == 0) {
+		if (contentMessage == `${prefix}neo`) {
 			return request(`https://api.nasa.gov/neo/rest/v1/feed/today?detailed=true&api_key=DEMO_KEY`, (err, response, body) => {
 				if (err) throw err;
 				var jsonData = JSON.parse(body);
@@ -1252,7 +1240,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//spacex
-		if (contentMessage.indexOf(`${prefix}spacex`) == 0) {
+		if (contentMessage == `${prefix}spacex`) {
 			return request(`https://api.spacexdata.com/v3/launches/latest`, (err, response, body) => {
 				if (err) throw err;
 				var data = JSON.parse(body);
@@ -1287,7 +1275,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//cân bằng phương trình hóa học
 		if (contentMessage.indexOf(`${prefix}chemeb`) == 0) {
-			console.log = function() {}; //Disable console.log() in this command.
+			console.log = () => {};
 			const chemeb = require('chem-eb');
 			if (event.type == "message_reply") {
 				var msg = event.messageReply.body;
@@ -1325,7 +1313,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var artists = artistList.join(', ');
 				var characters = characterList.join(', ');
 				if (characters == '') characters = 'Original';
-				return api.sendMessage("Tiêu đề: " + title, threadID, () => {
+				api.sendMessage("Tiêu đề: " + title, threadID, () => {
 					api.sendMessage("Tác giả: " + artists, threadID, () => {
 						api.sendMessage("Nhân vật: " + characters, threadID, () => {
 							api.sendMessage("Tags: " + tags, threadID, () => {
@@ -1603,7 +1591,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//daily gift
-		if (contentMessage.indexOf(`${prefix}daily`) == 0) {
+		if (contentMessage == `${prefix}daily`) {
 			let cooldown = 8.64e7;
 			return Economy.getDailyTime(senderID).then((lastDaily) => {
 				if (lastDaily !== null && cooldown - (Date.now() - lastDaily) > 0) {
@@ -1801,8 +1789,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//Check if command is correct
 		if (contentMessage.indexOf(prefix) == 0) {
-			var findSpace = contentMessage.indexOf(' ');
-			var checkCmd;
+			var checkCmd, findSpace = contentMessage.indexOf(' ');
 			if (findSpace == -1) {
 				checkCmd = stringSimilarity.findBestMatch(contentMessage.slice(prefix.length, contentMessage.length), nocmdData.cmds);
 				if (checkCmd.bestMatch.target == contentMessage.slice(prefix.length, contentMessage.length)) return;

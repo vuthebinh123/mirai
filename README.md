@@ -45,6 +45,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.3.2: Đổi lại SLEEPTIME và WAKETIME
 
+- 4.3.3: repeat -> echo, optimize
+
 </details>
 
 # Installation
