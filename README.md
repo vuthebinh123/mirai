@@ -47,6 +47,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.3.3: repeat -> echo, optimize
 
+- 4.3.4: thêm config canCheckUpdate, sửa lỗi undefined trong unsend.js, optimize
+
 </details>
 
 # Installation

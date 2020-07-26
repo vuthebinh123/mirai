@@ -1,6 +1,6 @@
 module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, Economy }) {
 	/* ================ Config ==================== */
-	let {prefix, googleSearch, wolfarm, yandex, openweather, tenor, saucenao, waketime, sleeptime, admins, ENDPOINT, nsfwGodMode} = config;
+	let {prefix, canCheckUpdate, googleSearch, wolfarm, yandex, openweather, tenor, saucenao, waketime, sleeptime, admins, ENDPOINT, nsfwGodMode} = config;
 	const fs = require("fs-extra");
 	const moment = require("moment-timezone");
 	const request = require("request");
@@ -9,22 +9,24 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 	var resetNSFW = false;
 
 	/* ================ Check update ================ */
-	const axios = require('axios');
-	const semver = require('semver');
-	axios.get('https://raw.githubusercontent.com/roxtigger2003/mirai/master/package.json').then((res) => {
-		modules.log("Đang kiểm tra cập nhật...", 1);
-		var local = JSON.parse(fs.readFileSync('./package.json')).version;
-		var remote = res.data.version;
-		if (semver.lt(local, remote)) {
-			modules.log('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', 1);
-			api.sendMessage('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', admins[0]);
-			fs.writeFileSync('./.needUpdate', '');
-		}
-		else {
-			if (fs.existsSync('./.needUpdate')) fs.removeSync('./.needUpdate');
-			modules.log('Bạn đang sử dụng bản mới nhất!', 1);
-		}
-	}).catch(err => console.error(err));
+	if (canCheckUpdate) {
+		const axios = require('axios');
+		const semver = require('semver');
+		axios.get('https://raw.githubusercontent.com/roxtigger2003/mirai/master/package.json').then((res) => {
+			modules.log("Đang kiểm tra cập nhật...", 1);
+			var local = JSON.parse(fs.readFileSync('./package.json')).version;
+			var remote = res.data.version;
+			if (semver.lt(local, remote)) {
+				modules.log('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', 1);
+				api.sendMessage('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', admins[0]);
+				fs.writeFileSync('./.needUpdate', '');
+			}
+			else {
+				if (fs.existsSync('./.needUpdate')) fs.removeSync('./.needUpdate');
+				modules.log('Bạn đang sử dụng bản mới nhất!', 1);
+			}
+		}).catch(err => console.error(err));
+	}
 
 	/* ================ CronJob ==================== */
 	if (!fs.existsSync(__dirname + "/src/groupID.json")) {
@@ -34,54 +36,51 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			list.forEach(item => {
 				if (item.isGroup == true) data.push(item.threadID);
 			});
-			fs.writeFile(__dirname + "/src/groupID.json", JSON.stringify(data), err => {
-				if (err) throw err;
-				modules.log("Tạo file groupID mới thành công!");
+			fs.writeFileSync(__dirname + "/src/groupID.json", JSON.stringify(data));
+			modules.log("Tạo file groupID mới thành công!");
+		});
+	}
+
+	fs.readFile(__dirname + "/src/groupID.json", "utf-8", (err, data) => {
+		if (err) throw err;
+		var groupids = JSON.parse(data);
+		if (!fs.existsSync(__dirname + "/src/listThread.json")) {
+			var firstJSON = {
+				wake: [],
+				sleep: []
+			};
+			fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(firstJSON));
+			modules.log("Tạo file listThread mới thành công!");
+		}
+		setInterval(() => {
+			var oldData = JSON.parse(fs.readFileSync(__dirname + "/src/listThread.json"));
+			var timer = moment.tz("Asia/Ho_Chi_Minh").format("HH:mm");
+			groupids.forEach(item => {
+				while (timer == sleeptime && !oldData.sleep.includes(item)) {
+					api.sendMessage(`Tới giờ ngủ rồi đấy nii-chan, おやすみなさい!`, item);
+					oldData.sleep.push(item);
+					break;
+				}
+				while (timer == waketime && !oldData.wake.includes(item)) {
+					api.sendMessage(`おはようございます các nii-chan uwu`, item);
+					oldData.wake.push(item);
+					break;
+				}
+				fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(oldData));
 			});
-		});
-	}
-	else {
-		fs.readFile(__dirname + "/src/groupID.json", "utf-8", (err, data) => {
-			if (err) throw err;
-			var groupids = JSON.parse(data);
-			if (!fs.existsSync(__dirname + "/src/listThread.json")) {
-				var firstJSON = {
-					wake: [],
-					sleep: []
-				};
-				fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(firstJSON));
-				modules.log("Tạo file listThread mới thành công!");
-			}
-			setInterval(() => {
-				var oldData = JSON.parse(fs.readFileSync(__dirname + "/src/listThread.json"));
-				var timer = moment.tz("Asia/Ho_Chi_Minh").format("HH:mm");
-				groupids.forEach(item => {
-					while (timer == sleeptime && !oldData.sleep.includes(item)) {
-						api.sendMessage(`Tới giờ ngủ rồi đấy nii-chan, おやすみなさい!`, item);
-						oldData.sleep.push(item);
-						break;
-					}
-					while (timer == waketime && !oldData.wake.includes(item)) {
-						api.sendMessage(`おはようございます các nii-chan uwu`, item);
-						oldData.wake.push(item);
-						break;
-					}
-					fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(oldData));
-				});
-				if (timer == "23:05" || timer == "07:05") fs.unlinkSync(__dirname + "/src/listThread.json");
-				if (timer == "00:00")
-					if (resetNSFW == false) {
-						resetNSFW = true;
-						Economy.resetNSFW();
-					}
-			}, 1000);
-		});
-	}
+			if (timer == "23:05" || timer == "07:05") fs.unlinkSync(__dirname + "/src/listThread.json");
+			if (timer == "00:00")
+				if (resetNSFW == false) {
+					resetNSFW = true;
+					Economy.resetNSFW();
+				}
+		}, 1000);
+	});
 
 	if (!fs.existsSync(__dirname + "/src/shortcut.json")) {
 		var template = [];
 		fs.writeFileSync(__dirname + "/src/shortcut.json", JSON.stringify(template));
-		return modules.log('Tạo file shortcut mới thành công!');
+		modules.log('Tạo file shortcut mới thành công!');
 	}
 
 	return function({ event }) {
@@ -137,8 +136,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				getCMDS.splice(getIndex, 1);
 				api.sendMessage("Đã bỏ cấm " + content + " trong group này", threadID);
 			}
-			fs.writeFileSync(__dirname + "/src/cmds.json", JSON.stringify(jsonData), "utf-8");
-			return;
+			return fs.writeFileSync(__dirname + "/src/cmds.json", JSON.stringify(jsonData), "utf-8");
 		}
 
 		//ban command
@@ -162,8 +160,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				}
 				api.sendMessage("Đã cấm " + content + " trong group này", threadID);
 			}
-			fs.writeFileSync(__dirname + "/src/cmds.json", JSON.stringify(jsonData), "utf-8");
-			return;
+			return fs.writeFileSync(__dirname + "/src/cmds.json", JSON.stringify(jsonData), "utf-8");
 		}
 
 		// Unban thread
@@ -887,9 +884,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var contentMinute = content.split(":")[1];
 				if (isNaN(contentHour) || isNaN(contentMinute) || contentHour > 23 || contentMinute > 59 || contentHour < 0 || contentMinute < 0 || contentHour.length != 2 || contentMinute.length != 2)  return api.sendMessage(`Không đúng format, hãy xem trong ${prefix}help`, threadID, messageID);				var getTime = moment().utcOffset("+07:00").format();
 				var time = getTime.slice(getTime.indexOf("T") + 1, getTime.indexOf("+"));
-				var hour = time.split(":")[0];
-				var minute = time.split(":")[1];
-				var sleepTime = getTime.replace(hour + ":", contentHour + ":").replace(minute + ":", contentMinute + ":");
+				var sleepTime = getTime.replace(time.split(":")[0] + ":", contentHour + ":").replace(time.split(":")[1] + ":", contentMinute + ":");
 				for (var i = 1; i < 7; i++) wakeTime.push(moment(sleepTime).utcOffset("+07:00").add(90 * i + 15, 'm').format("HH:mm"));
 				return api.sendMessage("Nếu bạn đi ngủ vào lúc " + content + ", những thời gian hoàn hảo nhất để thức dậy là:\n" + wakeTime.join(', ') + "\nFact: Thời gian để bạn vào giấc ngủ từ lúc nhắm mắt là 15-20 phút", threadID, messageID);
 			}
@@ -906,9 +901,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			if (isNaN(contentHour) || isNaN(contentMinute) || contentHour > 23 || contentMinute > 59 || contentHour < 0 || contentMinute < 0 || contentHour.length != 2 || contentMinute.length != 2)  return api.sendMessage(`Không đúng format, hãy xem trong ${prefix}help`, threadID, messageID);
 			var getTime = moment().utcOffset("+07:00").format();
 			var time = getTime.slice(getTime.indexOf("T") + 1, getTime.indexOf("+"));
-			var hour = time.split(":")[0];
-			var minute = time.split(":")[1];
-			var wakeTime = getTime.replace(hour + ":", contentHour + ":").replace(minute + ":", contentMinute + ":");
+			var wakeTime = getTime.replace(time.split(":")[0] + ":", contentHour + ":").replace(time.split(":")[1] + ":", contentMinute + ":");
 			for (var i = 6; i > 0; i--) sleepTime.push(moment(wakeTime).utcOffset("+07:00").subtract(90 * i + 15, 'm').format("HH:mm"));
 			return api.sendMessage("Nếu bạn muốn thức dậy vào lúc " + content + ", những thời gian hoàn hảo nhất để đi ngủ là:\n" + sleepTime.join(', ') + "\nFact: Thời gian để bạn vào giấc ngủ từ lúc nhắm mắt là 15-20 phút", threadID, messageID);
 		}

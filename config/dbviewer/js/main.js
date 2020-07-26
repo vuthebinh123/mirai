@@ -9,14 +9,9 @@ var bottomBarDefaultPos = null, bottomBarDisplayStyle = null;
 var errorBox = $("#error");
 var lastCachedQueryCount = {};
 
-var FileReader = window.FileReader;
-
 var selectFormatter = function (item) {
 	var index = item.text.indexOf("(");
-	if (index > -1) {
-		var name = item.text.substring(0, index);
-		return name + '<span style="color:#ccc">' + item.text.substring(index - 1) + "</span>";
-	}
+	if (index > -1) return item.text.substring(0, index) + '<span style="color:#ccc">' + item.text.substring(index - 1) + "</span>";
 	else return item.text;
 };
 
@@ -258,7 +253,7 @@ function showError(msg) {
 	errorBox.text(msg);
 }
 
-function htmlEncode(value){
+function htmlEncode(value) {
 	return $('<div/>').text(value).html();
 }
 

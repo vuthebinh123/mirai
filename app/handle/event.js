@@ -3,8 +3,7 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 	return function ({ event }) {
 		switch (event.logMessageType) {
 			case "log:subscribe":
-				var groupIDFile = fs.readFileSync(__dirname + "/src/groupID.json");
-				var groupIDData = JSON.parse(groupIDFile);
+				var groupIDData = JSON.parse(fs.readFileSync(__dirname + "/src/groupID.json"));
 				if (!groupIDData.some(item => item == event.threadID)) {
 					groupIDData.push(event.threadID);
 					fs.writeFileSync(__dirname + "/src/groupID.json", JSON.stringify(groupIDData));
