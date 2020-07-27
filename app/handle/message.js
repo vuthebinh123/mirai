@@ -6,11 +6,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 	const request = require("request");
 	const ms = require("parse-ms");
 	const stringSimilarity = require('string-similarity');
+	const axios = require('axios');
 	var resetNSFW = false;
 
 	/* ================ Check update ================ */
 	if (canCheckUpdate) {
-		const axios = require('axios');
 		const semver = require('semver');
 		axios.get('https://raw.githubusercontent.com/roxtigger2003/mirai/master/package.json').then((res) => {
 			modules.log("Đang kiểm tra cập nhật...", 1);
