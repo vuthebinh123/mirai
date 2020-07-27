@@ -49,6 +49,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.3.4: thêm config canCheckUpdate, sửa lỗi undefined trong unsend.js, optimize
 
+- 4.3.5: sửa lỗi axios not defined
+
 </details>
 
 # Installation
