@@ -15,10 +15,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		axios.get('https://raw.githubusercontent.com/roxtigger2003/mirai/master/package.json').then((res) => {
 			modules.log("Đang kiểm tra cập nhật...", 1);
 			var local = JSON.parse(fs.readFileSync('./package.json')).version;
-			var remote = res.data.version;
-			if (semver.lt(local, remote)) {
+			if (semver.lt(local, res.data.version)) {
 				modules.log('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', 1);
-				api.sendMessage('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', admins[0]);
+				api.sendMessage('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!\n\nBạn có thể tắt kiểm tra cập nhật bằng cách vào config/index.js và đặt giá trị của canCheckUpdate thành false.', admins[0]);
 				fs.writeFileSync('./.needUpdate', '');
 			}
 			else {
@@ -33,49 +32,43 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		var data = [];
 		api.getThreadList(100, null, ["INBOX"], function(err, list) {
 			if (err) throw err;
-			list.forEach(item => {
-				if (item.isGroup == true) data.push(item.threadID);
+			list.forEach(item => (item.isGroup == true) ? data.push(item.threadID) : '');
+			fs.writeFile(__dirname + "/src/groupID.json", JSON.stringify(data), err => {
+				if (err) throw err;
+				modules.log("Tạo file groupID mới thành công!");
 			});
-			fs.writeFileSync(__dirname + "/src/groupID.json", JSON.stringify(data));
-			modules.log("Tạo file groupID mới thành công!");
 		});
 	}
-
-	fs.readFile(__dirname + "/src/groupID.json", "utf-8", (err, data) => {
-		if (err) throw err;
-		var groupids = JSON.parse(data);
-		if (!fs.existsSync(__dirname + "/src/listThread.json")) {
-			var firstJSON = {
-				wake: [],
-				sleep: []
-			};
-			fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(firstJSON));
-			modules.log("Tạo file listThread mới thành công!");
-		}
-		setInterval(() => {
-			var oldData = JSON.parse(fs.readFileSync(__dirname + "/src/listThread.json"));
-			var timer = moment.tz("Asia/Ho_Chi_Minh").format("HH:mm");
-			groupids.forEach(item => {
-				while (timer == sleeptime && !oldData.sleep.includes(item)) {
-					api.sendMessage(`Tới giờ ngủ rồi đấy nii-chan, おやすみなさい!`, item);
-					oldData.sleep.push(item);
-					break;
-				}
-				while (timer == waketime && !oldData.wake.includes(item)) {
-					api.sendMessage(`おはようございます các nii-chan uwu`, item);
-					oldData.wake.push(item);
-					break;
-				}
-				fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(oldData));
-			});
-			if (timer == "23:05" || timer == "07:05") fs.unlinkSync(__dirname + "/src/listThread.json");
-			if (timer == "00:00")
-				if (resetNSFW == false) {
-					resetNSFW = true;
-					Economy.resetNSFW();
-				}
-		}, 1000);
-	});
+	else {
+		fs.readFile(__dirname + "/src/groupID.json", "utf-8", (err, data) => {
+			if (err) throw err;
+			var groupids = JSON.parse(data);
+			if (!fs.existsSync(__dirname + "/src/listThread.json")) fs.writeFile(__dirname + "/src/listThread.json", JSON.stringify({ wake: [], sleep: [] }), err => modules.log("Tạo file listThread mới thành công!"));
+			setInterval(() => {
+				var oldData = JSON.parse(fs.readFileSync(__dirname + "/src/listThread.json"));
+				var timer = moment.tz("Asia/Ho_Chi_Minh").format("HH:mm");
+				groupids.forEach(item => {
+					while (timer == sleeptime && !oldData.sleep.includes(item)) {
+						api.sendMessage(`Tới giờ ngủ rồi đấy nii-chan, おやすみなさい!`, item);
+						oldData.sleep.push(item);
+						break;
+					}
+					while (timer == waketime && !oldData.wake.includes(item)) {
+						api.sendMessage(`おはようございます các nii-chan uwu`, item);
+						oldData.wake.push(item);
+						break;
+					}
+					fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(oldData));
+				});
+				if (timer == "23:05" || timer == "07:05") fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify({ wake: [], sleep: [] }));
+				if (timer == "00:00")
+					if (resetNSFW == false) {
+						resetNSFW = true;
+						Economy.resetNSFW();
+					}
+			}, 1000);
+		});
+	}
 
 	if (!fs.existsSync(__dirname + "/src/shortcut.json")) {
 		var template = [];

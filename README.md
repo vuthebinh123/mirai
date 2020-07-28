@@ -51,6 +51,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.3.5: sửa lỗi axios not defined
 
+- 4.3.6: sửa cronjob (reversed về lại 4.3.3).
+
 </details>
 
 # Installation

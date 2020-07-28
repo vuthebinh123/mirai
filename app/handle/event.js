@@ -3,11 +3,6 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 	return function ({ event }) {
 		switch (event.logMessageType) {
 			case "log:subscribe":
-				var groupIDData = JSON.parse(fs.readFileSync(__dirname + "/src/groupID.json"));
-				if (!groupIDData.some(item => item == event.threadID)) {
-					groupIDData.push(event.threadID);
-					fs.writeFileSync(__dirname + "/src/groupID.json", JSON.stringify(groupIDData));
-				}
 				for (var i = 0; i < event.logMessageData.addedParticipants.length; i++) {
 					if (event.logMessageData.addedParticipants[i].userFbId == api.getCurrentUserID()) {
 						Thread.createThread(event.threadID);
