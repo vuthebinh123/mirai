@@ -17,7 +17,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var local = JSON.parse(fs.readFileSync('./package.json')).version;
 			if (semver.lt(local, res.data.version)) {
 				modules.log('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', 1);
-				api.sendMessage('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!\n\nBạn có thể tắt kiểm tra cập nhật bằng cách vào config/index.js và đặt giá trị của canCheckUpdate thành false.', admins[0]);
 				fs.writeFileSync('./.needUpdate', '');
 			}
 			else {
@@ -939,15 +938,15 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//giveaway
-		if (contentMessage.indexOf(`${prefix}giveaway`) == 0) {
-			var content = contentMessage.slice(prefix.length + 9, contentMessage.length);
+		if (contentMessage.indexOf(`${prefix}ga`) == 0) {
+			var content = contentMessage.slice(prefix.length + 3, contentMessage.length);
 			api.getThreadInfo(threadID, function(err, info) {
 				if (err) return api.sendMessage(`Đã xảy ra lỗi không mong muốn`, threadID, messageID);
 				let winner = info.participantIDs[Math.floor(Math.random() * info.participantIDs.length)];
 				User.getName(winner).then((name) => {
 					if (err) return api.sendMessage(`Đã xảy ra lỗi không mong muốn`, threadID, messageID);
 					api.sendMessage({
-						body: `Yahoo ${name}, bạn đã thắng giveaway! phần thưởng là: ${content}🥳🥳.`,
+						body: `Yahoo ${name}, bạn đã thắng giveaway! phần thưởng là: "${content}" 🥳🥳.`,
 						mentions: [
 							{
 								tag: name,
@@ -990,20 +989,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//say
 		if (contentMessage.indexOf(`${prefix}say`) == 0) {
-			const tts = require("./modules/say");
-			var content = contentMessage.slice(prefix.length + 4,contentMessage.length);
-			let callback = function() {
-				api.sendMessage({
-					body: "",
-					attachment: fs.createReadStream(__dirname + "/src/say.mp3")
-				}, threadID, () => fs.unlinkSync(__dirname + "/src/say.mp3"));
-			};
-			if (contentMessage.indexOf("jp") == 5) tts.other(contentMessage.slice(prefix.length + 7, contentMessage.length),"ja",callback);
-			else if (contentMessage.indexOf("en") == 5) tts.other(contentMessage.slice(prefix.length + 7, contentMessage.length),"en-US",callback);
-			else if (contentMessage.indexOf("ko") == 5) tts.other(contentMessage.slice(prefix.length + 7, contentMessage.length),"ko",callback);
-			else if (contentMessage.indexOf("ru") == 5) tts.other(contentMessage.slice(prefix.length + 7, contentMessage.length),"ru",callback);
-			else tts.vn(content, callback);
-			return;
+			var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 4, contentMessage.length);
+			var languageToSay = (["ru","en","ko","ja"].some(item => content.indexOf(item) == 0)) ? content.slice(0, content.indexOf(" ")) : 'vi';
+			var msg = (languageToSay != 'vi') ? content.slice(3, contentMessage.length) : content;
+			var callback = () => api.sendMessage({body: "", attachment: fs.createReadStream(__dirname + "/src/say.mp3")}, threadID, () => fs.unlinkSync(__dirname + "/src/say.mp3"));
+			return request(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(msg)}&tl=${languageToSay}&client=tw-ob`).pipe(fs.createWriteStream(__dirname+'/src/say.mp3')).on('close',() => callback());
 		}
 
 		//cập nhật tình hình dịch
@@ -1122,13 +1112,14 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//uptime
 		if (contentMessage == `${prefix}uptime`) {
 			var time = process.uptime();
+			var hours = Math.floor(time / (60*60));
 			var minutes = Math.floor((time % (60 * 60)) / 60);
 			var seconds = Math.floor(time % 60);
 			return api.sendMessage(
-				"Bot đã hoạt động được " +
+				"Bot đã hoạt động được " + 
+				hours + " giờ " +
 				minutes + " phút " +
-				seconds + " giây." +
-				"\nLưu ý: Bot sẽ tự động restart sau khi 10 phút hoạt động!",
+				seconds + " giây.",
 				threadID, messageID
 			);
 		}
@@ -1167,7 +1158,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage == `${prefix}ping`)
 			return api.getThreadInfo(threadID, (err, info) => {
 				if (err) return api.sendMessage("Đã có lỗi xảy ra", threadID, messageID);
-				var icons = ["🥂", "🎉", "🌏", "💥", "💖", "👏🏿"];
+				var icons = ["🥂","🎉","🌏","💥","💖","👏🏿","💪","❗️","❤️"];
 				var ids = info.participantIDs;
 				var botid = api.getCurrentUserID();
 				var callid = { body: "Ping" + icons[Math.floor(Math.random() * icons.length)], mentions: [{ tag: `${botid}`, id: botid }] };
@@ -1648,47 +1639,68 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//roulette
-		if (contentMessage.indexOf(`${prefix}roul`) == 0) {
-			return Economy.getMoney(senderID).then((moneydb) => {
+		if (contentMessage.indexOf(`${prefix}roul`) == 0) 
+			Economy.getMoney(senderID).then(function(moneydb) {
 				var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
 				if (!content) return api.sendMessage(`Bạn chưa nhập thông tin đặt cược!`, threadID, messageID);
 				var string = content.split(" ");
 				var color = string[0];
 				var money = string[1];
-				var moneyWin = "";
-				function isOdd(num) {
-					if (num % 2 == 0) return false;
-					else if (num % 2 == 1) return true;
+				function checker(num) {
+					if (num == 0) return 'blue';
+					else if (num % 2 == 0 && num % 6 != 0 && num % 10 != 0) return 'red';
+					else if (num % 3 == 0 && num % 6 != 0) return 'green';
+					else if (num % 5 == 0 && num % 10 != 0) return 'yellow';
+					else if (num % 10 == 0) return 'violet';
+					else {
+						return 'black';
+					}
 				}
-				let random = Math.floor(Math.random() * 37);
-				if (isNaN(money)|| money.indexOf("-") !== -1) return api.sendMessage(`Số tiền đặt cược của bạn không phải là một con số, vui lòng xem lại cách sử dụng tại ${prefix}help roul`, threadID, messageID);
+				let random = Math.floor(Math.random() * 50);
+				if (isNaN(money) || money.indexOf("-") !== -1) return api.sendMessage(`Số tiền đặt cược của bạn không phải là một con số, vui lòng xem lại cách sử dụng tại ${prefix}help roul`, threadID, messageID);
 				if (!money || !color) return api.sendMessage("Sai format", threadID, messageID);
 				if (money > moneydb) return api.sendMessage(`Số tiền của bạn không đủ`, threadID, messageID);
-				if (money < 50) return api.sendMessage(`Số tiền đặt cược của bạn quá nhỏ, tối thiểu là 50 đô!`, threadID, messageID);
-				if (color == "b" || color.includes("black")) color = 0;
+				if (money < 50) return api.sendMessage(`Số tiền đặt cược của bạn quá nhỏ, tối thiểu là 50 đô`, threadID, messageID);
+				if (color == "e" || color.includes("blue")) color = 0;
 				else if (color == "r" || color.includes("red")) color = 1;
 				else if (color == "g" || color.includes("green")) color = 2;
-				else return api.sendMessage("Bạn chưa nhập thông tin cá cược!, red [1.5x] black [2x] green [15x]", threadID, messageID);
-				if (random == 0) api.sendMessage("Màu 💚", threadID, messageID);
-				else if (isOdd(random)) api.sendMessage("Màu ❤️", threadID, messageID);
-				else if (!isOdd(random)) api.sendMessage("Màu 🖤", threadID, messageID);
-				if (random == 0 && color == 2) {
-					money *= 15;
-					api.sendMessage(`Bạn đã chọn màu 💚, bạn đã thắng với số tiền được nhân lên 15: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
-					modules.log(`${senderID} Won ${money} on green`);
-				}
-				else if (isOdd(random) && color == 1) {
-					money *= 1.5;
-					api.sendMessage(`Bạn đã chọn màu ❤️, bạn đã thắng với số tiền nhân lên 1.5: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
-					modules.log(`${senderID} Won ${money} on red`);
-				}
-				else if (!isOdd(random) && color == 0) {
+				else if (color == "y" || color.includes("yellow")) color = 3;
+				else if (color == "v" || color.includes("violet")) color = 4;
+				else if (color == "b" || color.includes("black")) color = 5;
+				else return api.sendMessage("Bạn chưa nhập thông tin cá cược!, black [x0.5] red [x1] green [x1.25] yellow [x1.5] violet [x1.75] blue [x2]", threadID, messageID);
+				if (checker(random) == 'blue') api.sendMessage("Màu 💙", threadID, messageID);
+				else if (checker(random) == 'red') api.sendMessage("Màu ♥️", threadID, messageID);
+				else if (checker(random) == 'green') api.sendMessage("Màu 💚", threadID, messageID);
+				else if (checker(random) == 'yellow') api.sendMessage("Màu 💛", threadID, messageID);
+				else if (checker(random) == 'violet') api.sendMessage("Màu 💜", threadID, messageID);
+				else if (checker(random) == 'black') api.sendMessage("Màu 🖤", threadID, messageID);
+				if (checker(random) == 'blue' && color == 0) {
 					money *= 2;
-					api.sendMessage(`Bạn đã chọn màu 🖤️, bạn đã thắng với số tiền nhân lên 2: ${money} đô. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
+					api.sendMessage(`Bạn đã chọn màu 💙, bạn đã thắng với số tiền được nhân lên 2: ${money *= 2} đô\nSố tiền hiện tại của bạn là: ${moneydb + money} đô.`, threadID, () => Economy.addMoney(senderID, money), messageID);
+					modules.log(`${senderID} Won ${money} on blue`);
+				} else if (checker(random) == 'red' && color == 1) {
+					money = parseInt(money * 1.75);
+					api.sendMessage(`Bạn đã chọn màu ♥️, bạn đã thắng với số tiền nhân lên 1.75: ${money} đô\nSố tiền hiện tại của bạn là: ${moneydb + money} đô.`, threadID, () => Economy.addMoney(senderID, money), messageID);
+					modules.log(`${senderID} Won ${money} on red`);
+				} else if (checker(random) == 'green' && color == 2) {
+					money = parseInt(money * 1.5);
+					api.sendMessage(`Bạn đã chọn màu 💚, bạn đã thắng với số tiền nhân lên 1.5: ${money} đô\nSố tiền hiện tại của bạn là: ${moneydb + money} đô.`, threadID, () => Economy.addMoney(senderID, money), messageID);
+					modules.log(`${senderID} Won ${money} on green`);
+				} else if (checker(random) == 'yellow' && color == 3) {
+					money = parseInt(money * 1.25);
+					api.sendMessage(`Bạn đã chọn màu 💛, bạn đã thắng với số tiền nhân lên 1.25: ${money} đô\nSố tiền hiện tại của bạn là: ${moneydb + money} đô.`, threadID, () => Economy.addMoney(senderID, money), messageID);
+					modules.log(`${senderID} Won ${money} on yellow`);
+				} else if (checker(random) == 'violet' && color == 4) {
+					money = parseInt(money * 1);
+					api.sendMessage(`Bạn đã chọn màu 💜, bạn đã thắng với số tiền nhân lên 1: ${money} đô\nSố tiền hiện tại của bạn là: ${moneydb + money} đô.`, threadID, () => Economy.addMoney(senderID, money), messageID);
+					modules.log(`${senderID} Won ${money} on violet`);
+				} else if (checker(random) == 'black' && color == 5) {
+					money = parseInt(money * 0.5);
+					api.sendMessage(`Bạn đã chọn màu 🖤️, bạn đã thắng với số tiền nhân lên 0.5: ${money} đô\nSố tiền hiện tại của bạn là: ${moneydb + money} đô.`, threadID, () => Economy.addMoney(senderID, money), messageID);
 					modules.log(`${senderID} Won ${money} on black`);
-				}
-				else api.sendMessage(`Bạn đã ra đê ở và mất trắng số tiền: ${money} đô. Số tiền hiện tại bạn có: ${moneydb}`, threadID, () => Economy.subtractMoney(senderID, parseInt(money)), messageID);
+				} else return api.sendMessage(`Bạn đã ra đê ở và mất trắng số tiền: ${money} đô :'(\nSố tiền hiện tại của bạn là: ${moneydb - money} đô.`, threadID, () => Economy.subtractMoney(senderID, money), messageID);
 			});
+			return;
 		}
 
 		//slot

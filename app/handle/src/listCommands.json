@@ -51,7 +51,7 @@
 	{
 		"name":"say",
 		"decs":"Điều khiển bot biến văn bản thành giọng đọc",
-		"usage":"say [en,ko,ru,jp] [Văn bản] nếu sử dụng tiếng việc thì phần language để trống",
+		"usage":"say [en,ko,ru,jp] [Văn bản] nếu sử dụng tiếng việt thì phần language để trống",
 		"example":"say Mirai-Chan xin chào tất cả mọi người",
 		"group":"general"
 	},
@@ -161,13 +161,6 @@
 		"group":"general"
 	},
 	{
-		"name":"quotes",
-		"decs":"Lấy châm ngôn sống của các bật thầy (không có Khá Bảnh hay Huấn Rose đâu)",
-		"usage":"quotes",
-		"example":"quotes",
-		"group":"general"
-	},
-	{
 		"name":"nhentai -r",
 		"decs":"Lấy code may mắn cho riêng bạn ( ͡° ͜ʖ ͡°)",
 		"usage":"nhentai -r",
@@ -203,10 +196,10 @@
 		"group":"study"
 	},
 	{
-		"name":"giveaway",
+		"name":"ga",
 		"decs":"Tạo ra 1 giveaway ảo",
-		"usage":"giveaway [phần thưởng]",
-		"example":"giveaway Nghĩa",
+		"usage":"ga [phần thưởng]",
+		"example":"ga trinh đít của Nghĩa",
 		"group":"general"
 	},
 	{
@@ -282,7 +275,7 @@
 	{
 		"name":"roul",
 		"decs":"Chơi cò quay (roulette)",
-		"usage":"roul [red, green, black] [số tiền cần đặt]",
+		"usage":"roul [blue, red, green, yellow, violet, black] [số tiền cần đặt]",
 		"example":"roul red 500",
 		"group":"economy"
 	},

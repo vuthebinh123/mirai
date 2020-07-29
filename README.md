@@ -53,6 +53,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.3.6: sửa cronjob (reversed về lại 4.3.3).
 
+- 4.3.6: giveaway -> ga, tối ưu và rút gọn cho say, thêm giờ vào cho uptime, thay đổi roul từ 3 màu thành 6 màu, thêm tắt bật refresh sau 10 phút, rút gọn log từ terminal/cmd, loại bỏ nhắc bản cập nhật qua tin nhắn!
+
 </details>
 
 # Installation
