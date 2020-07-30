@@ -57,6 +57,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.3.8: bật sẵn refresh
 
+- 4.3.9: sửa lỗi không nhận .env
+
 </details>
 
 # Installation

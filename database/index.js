@@ -1,3 +1,4 @@
+require('dotenv').config();
 const Sequelize = require("sequelize");
 const {database} = require("../config");
 const dialect = process.env.DIALECT || 'sqlite';

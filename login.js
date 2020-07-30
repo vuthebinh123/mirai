@@ -1,3 +1,4 @@
+require('dotenv').config();
 const fs = require("fs-extra");
 const login = require("fca-unofficial");
 const readline = require("readline");
