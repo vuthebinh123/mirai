@@ -59,6 +59,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.3.9: sửa lỗi không nhận .env
 
+- 4.3.10: loại bỏ lệnh facebook, youtube -p -> yt -v, youtube -m -> yt -m, optimize yt, bỏ thư mục modules
+
 </details>
 
 # Installation

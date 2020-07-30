@@ -454,121 +454,31 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 	/* ==================== Media Commands ==================== */
-		//get video facebook
-		if (contentMessage.indexOf(`${prefix}facebook -p`) == 0) {
-			var content = contentMessage.slice(prefix.length + 12, contentMessage.length);
-			const media = require("./modules/media");
-			if (!content) return api.sendMessage(`Bạn chưa nhập thông tin cần thiết!`, threadID, messageID);
-			api.sendMessage("Đợi em một xíu...", threadID, messageID);
-			require("fb-video-downloader").getInfo(content).then(info => {
-				let gg = JSON.stringify(info);
-				let data = JSON.parse(gg);
-				media.facebookVideo(data.download.sd, () => {
-					api.sendMessage({
-						body: "",
-						attachment: fs.createReadStream(__dirname + "/src/video.mp4")
-					}, threadID, () => fs.unlinkSync(__dirname + "/src/video.mp4"));
-				});
-			});
-			return;
-		}
 
-		//get video youtube
-		if (contentMessage.indexOf(`${prefix}youtube -p`) == 0) {
-			const media = require("./modules/media");
-			var content = contentMessage.slice(prefix.length + 11, contentMessage.length);
-			const ytdl = require("ytdl-core");
-			if (!content) return api.sendMessage("Bạn chưa nhập thông tin cần thiết!", threadID, messageID);
-			if (content.indexOf('https') == -1 || content.indexOf('http') == -1) {
-				request(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&key=${googleSearch}&q=${encodeURIComponent(content)}`, (err, response, body) => {
-					if (err) return api.sendMessage("Lỗi rồi :|", threadID, messageID);;
-					var retrieve = JSON.parse(body);
-					var content = "https://www.youtube.com/watch?v=" + retrieve.items[0].id.videoId;
-					var title = retrieve.items[0].snippet.title;
-					var thumbnails = retrieve.items[0].snippet.thumbnails.high.url;
-					let callback = function() {
-						api.sendMessage(
-							title,
-							threadID,
-							() => {
-								api.sendMessage({
-									body: ``,
-									attachment: fs.createReadStream(__dirname + "/src/thumbnails.png")
-								}, threadID, () => {
-									fs.unlinkSync(__dirname + "/src/thumbnails.png");
-									api.sendMessage(content, threadID, () => getVideo(content));
-								});
-							}, messageID
-						);
-					};
-					request(thumbnails).pipe(fs.createWriteStream(__dirname + `/src/thumbnails.png`)).on("close", callback);
-				});
-			}
-			else getVideo(content);
-			function getVideo(content) {
-				ytdl.getInfo(content, function(err, info) {
-					if (err) return api.sendMessage('Link youtube không hợp lệ!', threadID, messageID);
-					if (info.length_seconds > 360) return api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID);
-					api.sendMessage("Đợi em một xíu em đang xử lý...", threadID, messageID);
-					media.youtubeVideo(content, () => {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/video.mp4")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/video.mp4"));
-					});
-				});
-			};
-			return;
-		}
+		//youtube music
+		if (contentMessage.indexOf(`${prefix}yt -m`) == 0)
+			return (async () => {
+				var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 6, contentMessage.length);
+				var ytdl = require("ytdl-core");
+				var callback = () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/music.mp3")}, threadID, () => fs.unlinkSync(__dirname + "/src/music.mp3"));
+				var ffmpeg = require("fluent-ffmpeg");
+				var ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+				ffmpeg.setFfmpegPath(ffmpegPath);
+				if (content.indexOf("http") == -1) content = (await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&key=${googleSearch}&q=${encodeURIComponent(content)}`, {responseType: 'json'})).data.items[0].id.videoId;
+				ytdl.getInfo(content, (err, info) => if (info.length_seconds > 360) return api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID)});
+				return ffmpeg().input(ytdl(content)).toFormat("mp3").pipe(fs.createWriteStream(__dirname + "/src/music.mp3")).on("close", () => callback());
+			})();
 
-		//get audio youtube
-		if (contentMessage.indexOf(`${prefix}youtube -m`) == 0) {
-			const media = require("./modules/media");
-			var content = contentMessage.slice(prefix.length + 11, contentMessage.length);
-			const ytdl = require("ytdl-core");
-			if (!content) return api.sendMessage("Bạn chưa nhập thông tin cần thiết!", threadID, messageID);
-			if (content.indexOf('https') == -1 || content.indexOf('http') == -1) {
-				request(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&key=${googleSearch}&q=${encodeURIComponent(content)}`, (err, response, body) => {
-					if (err) return api.sendMessage("Đã có lỗi xảy ra!", threadID, messageID);;
-					var retrieve = JSON.parse(body);
-					var content = "https://www.youtube.com/watch?v=" + retrieve.items[0].id.videoId;
-					var title = retrieve.items[0].snippet.title;
-					var thumbnails = retrieve.items[0].snippet.thumbnails.high.url;
-					let callback = function() {
-						api.sendMessage(
-							title,
-							threadID,
-							() => {
-								api.sendMessage({
-									body: ``,
-									attachment: fs.createReadStream(__dirname + "/src/thumbnails.png")
-								}, threadID, () => {
-									fs.unlinkSync(__dirname + "/src/thumbnails.png");
-									api.sendMessage(content, threadID, () => getMusic(content));
-								});
-							},
-							messageID
-						);
-					};
-					request(thumbnails).pipe(fs.createWriteStream(__dirname + `/src/thumbnails.png`)).on("close", callback);
-				});
-			}
-			else getMusic(content);
-			function getMusic(content) {
-				ytdl.getInfo(content, function(err, info) {
-					if (err) return api.sendMessage('Link youtube không hợp lệ!', threadID, messageID);
-					if (info.length_seconds > 360) return api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID);
-					api.sendMessage("Đợi em một xíu em đang xử lý...", threadID, messageID);
-					media.youtubeMusic(content, () => {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/music.mp3")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/music.mp3"));
-					});
-				});
-			};
-			return;
-		}
+		//youtube video
+		if (contentMessage.indexOf(`${prefix}yt -v`) == 0)
+			return (async () => {
+				var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 6, contentMessage.length);
+				var ytdl = require("ytdl-core");
+				var callback = () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/video.mp4")}, threadID, () => fs.unlinkSync(__dirname + "/src/video.mp4"));
+				if (content.indexOf("http") == -1) content = (await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&key=${googleSearch}&q=${encodeURIComponent(content)}`, {responseType: 'json'})).data.items[0].id.videoId;
+				ytdl.getInfo(content, (err, info) => if (info.length_seconds > 360) return api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID)});
+				return ytdl(text).pipe(fs.createWriteStream(__dirname + "/src/video.mp4")).on("close", () => callback());
+			})();
 
 		//anime
 		if (contentMessage.indexOf(`${prefix}anime`) == 0) {
@@ -585,11 +495,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				let picData = JSON.parse(body);
 				let getURL = picData.url;
 				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
-				let callback = function() {
-					api.sendMessage({
-						body: "",
-						attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)
-					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
+				let callback = () => api.sendMessage({attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
 				};
 				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
 			});
@@ -622,10 +528,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					var stringURL = string.results[0].media[0].tinygif.url;
 					console.log(stringURL);
 					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + `/src/randompic.gif`)
-						}, threadID, () => fs.unlinkSync(__dirname + `/src/randompic.gif`));
+						api.sendMessage({attachment: fs.createReadStream(__dirname + `/src/randompic.gif`)}, threadID, () => fs.unlinkSync(__dirname + `/src/randompic.gif`));
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + `/src/randompic.gif`)).on("close", callback);
 				});
@@ -636,10 +539,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
 					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
+						api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/randompic.gif")}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
 				});
@@ -650,10 +550,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
 					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
+						api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/randompic.gif")}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
 				});
@@ -664,10 +561,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
 					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
+						api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/randompic.gif")}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
 				});
@@ -678,10 +572,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
 					let callback = function() {
-						api.sendMessage({
-							body: "",
-							attachment: fs.createReadStream(__dirname + "/src/randompic.gif")
-						}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
+						api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/randompic.gif")}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"));
 					};
 					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", callback);
 				});
