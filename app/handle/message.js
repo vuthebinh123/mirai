@@ -1639,7 +1639,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//roulette
-		if (contentMessage.indexOf(`${prefix}roul`) == 0) 
+		if (contentMessage.indexOf(`${prefix}roul`) == 0) {
 			Economy.getMoney(senderID).then(function(moneydb) {
 				var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
 				if (!content) return api.sendMessage(`Bạn chưa nhập thông tin đặt cược!`, threadID, messageID);
