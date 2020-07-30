@@ -465,7 +465,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 				ffmpeg.setFfmpegPath(ffmpegPath);
 				if (content.indexOf("http") == -1) content = (await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&key=${googleSearch}&q=${encodeURIComponent(content)}`, {responseType: 'json'})).data.items[0].id.videoId;
-				ytdl.getInfo(content, (err, info) => if (info.length_seconds > 360) return api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID)});
+				ytdl.getInfo(content, (err, info) => (info.length_seconds > 360) ? api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID) : '');
 				return ffmpeg().input(ytdl(content)).toFormat("mp3").pipe(fs.createWriteStream(__dirname + "/src/music.mp3")).on("close", () => callback());
 			})();
 
@@ -476,7 +476,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var ytdl = require("ytdl-core");
 				var callback = () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/video.mp4")}, threadID, () => fs.unlinkSync(__dirname + "/src/video.mp4"));
 				if (content.indexOf("http") == -1) content = (await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&key=${googleSearch}&q=${encodeURIComponent(content)}`, {responseType: 'json'})).data.items[0].id.videoId;
-				ytdl.getInfo(content, (err, info) => if (info.length_seconds > 360) return api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID)});
+				ytdl.getInfo(content, (err, info) => (info.length_seconds > 360) ? api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID) : '');
 				return ytdl(text).pipe(fs.createWriteStream(__dirname + "/src/video.mp4")).on("close", () => callback());
 			})();
 
