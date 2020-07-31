@@ -61,6 +61,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.3.10: loại bỏ lệnh facebook, youtube -p -> yt -v, youtube -m -> yt -m, optimize yt, bỏ thư mục modules
 
+- 4.3.11: sửa yt -v
+
 </details>
 
 # Installation
