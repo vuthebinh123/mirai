@@ -140,17 +140,17 @@
 		"group":"media"
 	},
 	{
-		"name":"youtube -p",
+		"name":"yt -v",
 		"decs":"Lấy video từ link youtube",
-		"usage":"youtube -p [link hoặc từ khoá]",
-		"example":"youtube -p https://www.youtube.com/?watch=xxxyyyzzz",
+		"usage":"yt -v [link hoặc từ khoá]",
+		"example":"youtube -v https://www.youtube.com/?watch=xxxyyyzzz",
 		"group":"media"
 	},
 	{
-		"name":"youtube -m",
+		"name":"yt -m",
 		"decs":"Lấy âm thanh từ link hoặc url youtube",
-		"usage":"youtube -m [link hoặc từ khoá]",
-		"example":"youtube -m https://www.youtube.com/?watch=xxxyyyzzz",
+		"usage":"tt -m [link hoặc từ khoá]",
+		"example":"yt -m https://www.youtube.com/?watch=xxxyyyzzz",
 		"group":"media"
 	},
 	{
