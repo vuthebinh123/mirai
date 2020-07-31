@@ -1,5 +1,5 @@
 const logger = require("../modules/log.js");
-module.exports = function ({ models, api }) {
+module.exports = function({ models, api }) {
 	const Thread = models.use('thread');
 
 	function createThread(threadID) {
@@ -12,6 +12,30 @@ module.exports = function ({ models, api }) {
 				logger(error, 2);
 			})
 		})
+	}
+
+	function setThread(threadID, options = {}) {
+		return Tbread.findOne({
+			where: {
+				threadID
+			}
+		}).then(function(thread) {
+			if (!thread) return;
+			return thread.update(options);
+		}).then(function() {
+			return true;
+		}).catch(function(error) {
+			logger(error, 2);
+			return false;
+		});
+	}
+
+	function delThread(threadID) {
+		return Tbread.findOne({
+			where: {
+				threadID
+			}
+		}).then(thread => thread.destroy());
 	}
 
 	function getThreads(where = {}) {
@@ -48,12 +72,12 @@ module.exports = function ({ models, api }) {
 			where: {
 				threadID
 			}
-		}).then(function (thread) {
+		}).then(function(thread) {
 			if (!thread) return;
 			return thread.update({ block });
 		}).then(function () {
 			return true;
-		}).catch(function (error) {
+		}).catch(function(error) {
 			logger(error, 2);
 			return false;
 		})
@@ -68,12 +92,12 @@ module.exports = function ({ models, api }) {
 			where: {
 				threadID
 			}
-		}).then(function (thread) {
+		}).then(function(thread) {
 			if (!thread) return;
 			return thread.update({ blockResend });
 		}).then(function () {
 			return true;
-		}).catch(function (error) {
+		}).catch(function(error) {
 			logger(error, 2);
 			return false;
 		})
@@ -106,6 +130,8 @@ module.exports = function ({ models, api }) {
 	return {
 		getThreads,
 		createThread,
+		setThread,
+		delThread,
 		getName,
 		updateName,
 		ban,

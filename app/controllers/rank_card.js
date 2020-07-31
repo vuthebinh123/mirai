@@ -44,7 +44,6 @@ module.exports = async function(data) {
 	const [bg, avt, name_txt, level_txt, score_txt] = await Promise.all(readJimp);
 	bg.composite(bg, 0, 0).composite(avt.resize(130, jimp.AUTO), 72, 40).composite(name_txt, 275, 110).composite(level_txt, 335, 45).composite(score_txt, 410, 147)
 	const pathImg = path.resolve(__root, `../temp/${id}.png`);
-	const completed = await new Promise((resolve) => bg.write(pathImg, () => resolve(pathImg)));
 	imgpath.forEach(item => (!item.includes('bg.jpg')) ? fs.unlinkSync(item) : '');
-	return completed;
+	return await new Promise((resolve) => bg.write(pathImg, () => resolve(pathImg)));
 };

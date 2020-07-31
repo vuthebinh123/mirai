@@ -5,6 +5,9 @@ module.exports = function ({ sequelize, Sequelize }) {
 			primaryKey: true,
 			autoIncrement: true
 		},
+		name: {
+			type: Sequelize.STRING
+		},
 		uid: {
 			type: Sequelize.BIGINT,
 			unique: true

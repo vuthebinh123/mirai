@@ -27,7 +27,7 @@ if (process.env.REFRESHING == 'on') setTimeout(() => {
 }, 600000);
 
 var facebook = ({ Op, models }) => {
-	require("npmlog").info = () => {};
+	require('npmlog').info = () => {};
 	login({ appState: require(appStateFile) }, (error, api) => {
 		if (error) return logger(error, 2);
 		fs.writeFileSync(appStateFile, JSON.stringify(api.getAppState(), null, "\t"));

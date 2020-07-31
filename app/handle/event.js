@@ -15,12 +15,10 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread }) {
 						User.getName(uid).then(name => {
 							api.sendMessage({
 								body: "Chào mừng " + name + " đã vào group.",
-								mentions: [
-									{
-										tag: name,
-										id: uid
-									}
-								]
+								mentions: [{
+									tag: name,
+									id: uid
+								}]
 							}, event.threadID);
 						});
 					}

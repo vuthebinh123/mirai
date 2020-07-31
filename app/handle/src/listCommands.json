@@ -43,7 +43,7 @@
 	},
 	{
 		"name":"ping",
-		"decs":"Tag toàn bộ thành viên trong nhóm cùng một lúc (Hạn chế sử dụng)",
+		"decs":"Tag toàn bộ thành viên trong nhóm cùng một lúc",
 		"usage":"ping",
 		"example":"ping",
 		"group":"general"
@@ -51,7 +51,7 @@
 	{
 		"name":"say",
 		"decs":"Điều khiển bot biến văn bản thành giọng đọc",
-		"usage":"say [en,ko,ru,jp] [Văn bản] nếu sử dụng tiếng việt thì phần language để trống",
+		"usage":"say [en,ko,ru,ja] [Văn bản] nếu sử dụng tiếng việt thì phần language để trống",
 		"example":"say Mirai-Chan xin chào tất cả mọi người",
 		"group":"general"
 	},
@@ -105,6 +105,13 @@
 		"group":"system"
 	},
 	{
+		"name":"gRank",
+		"decs":"Lấy top 50 người có level cao nhất.",
+		"usage":"gRank",
+		"example":"gRank",
+		"group":"system"
+	},
+	{
 		"name":"anime",
 		"decs":"Lấy ảnh anime SFW",
 		"usage":"anime [tag]",
@@ -131,13 +138,6 @@
 		"usage":"rainbow [số lần đổi]",
 		"example":"rainbow 10",
 		"group":"system"
-	},
-	{
-		"name":"facebook -p",
-		"decs":"Lấy video từ link facebook",
-		"usage":"facebook -p [url hoặc link]",
-		"example":"facebook -p https://www.facebook.com/...",
-		"group":"media"
 	},
 	{
 		"name":"yt -v",
@@ -199,14 +199,14 @@
 		"name":"ga",
 		"decs":"Tạo ra 1 giveaway ảo",
 		"usage":"ga [phần thưởng]",
-		"example":"ga trinh đít của Nghĩa",
+		"example":"ga trinh đít của Nghĩa (?)",
 		"group":"general"
 	},
 	{
 		"name":"uid",
 		"decs":"Xem UserID của tài khoản được nhắc tới",
 		"usage":"uid [để trống/nhắc tới một tài khoản]",
-		"example":"uid @Nghĩa",
+		"example":"uid @SpermLord",
 		"group":"system"
 	},
 	{
@@ -429,8 +429,8 @@
 	{
 		"name":"sauce",
 		"decs":"Tìm nguồn bức ảnh anime giúp bạn.",
-		"usage":"sauce",
-		"example":"sauce và reply ảnh cần tìm",
+		"usage":"sauce và reply ảnh cần tìm",
+		"example":"sauce",
 		"group":"media"
 	}
 ]

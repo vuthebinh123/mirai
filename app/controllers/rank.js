@@ -67,6 +67,7 @@ module.exports = function({ models, api }) {
 	return {
 		getPoint,
 		updatePoint,
-		setPoint
+		setPoint,
+		expToLevel
 	};
 };

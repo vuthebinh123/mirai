@@ -9,12 +9,10 @@ module.exports = function({ api, __GLOBAL, User }) {
 			if (event.senderID != api.getCurrentUserID())
 				return api.sendMessage({
 					body: name + msg,
-					mentions: [
-						{
-							tag: name,
-							id: event.senderID
-						}
-					]
+					mentions: [{
+						tag: name,
+						id: event.senderID
+					}]
 				}, event.threadID);
 		})
 	}
