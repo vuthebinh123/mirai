@@ -497,7 +497,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				let getURL = picData.url;
 				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
 				let callback = () => api.sendMessage({attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
-				};
 				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
 			});
 		}
