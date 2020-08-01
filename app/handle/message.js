@@ -1405,12 +1405,21 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				if (money < 50) return api.sendMessage(`Số tiền đặt cược của bạn quá nhỏ, tối thiểu là 50 đô`, threadID, messageID);
 				var check = (num) => (num == 0) ? '💙' : (num % 2 == 0 && num % 6 != 0 && num % 10 != 0) ? '♥️' : (num % 3 == 0 && num % 6 != 0) ? '💚' : (num % 5 == 0 && num % 10 != 0) ? '💛' : (num % 10 == 0) ? '💜' : '🖤️';
 				let random = Math.floor(Math.random() * 50);
-				if ((color == 'blue' || color == 'e') && check(random) == '💙') api.sendMessage(`Bạn đã chọn màu 💙, bạn đã thắng với số tiền được nhân lên 2: ${money * 2} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 2)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 2)), messageID);
-				else if ((color == 'red' || color == 'r') && check(random) == '♥️') api.sendMessage(`Bạn đã chọn màu ♥️, bạn đã thắng với số tiền nhân lên 1.75: ${money * 1.75} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 1.75)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 1.75)), messageID);
-				else if ((color == 'green' || color == 'g') && check(random) == '💚') api.sendMessage(`Bạn đã chọn màu 💚, bạn đã thắng với số tiền nhân lên 1.5: ${money * 1.5} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 1.5)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 1.5)), messageID);
-				else if ((color == 'yellow' || color == 'y') && check(random) == '💛') api.sendMessage(`Bạn đã chọn màu 💛, bạn đã thắng với số tiền nhân lên 1.25: ${money * 1.25} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 1.25)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 1.25)), messageID);
-				else if ((color == 'violet' || color == 'v') && check(random) == '💜') api.sendMessage(`Bạn đã chọn màu 💜, bạn đã thắng với số tiền nhân lên 1: ${money} đô\nSố tiền hiện tại của bạn là: ${moneydb + money} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
-				else if ((color == 'black' || color == 'b') && check(random) == '🖤️') api.sendMessage(`Bạn đã chọn màu 🖤️, bạn đã thắng với số tiền nhân lên 0.5: ${money * 0.5} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 0.5)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 0.5)), messageID);
+				
+				if (color == "e" || color == "blue") color = 0;
+				else if (color == "r" || color == "red") color = 1;
+				else if (color == "g" || color == "green") color = 2;
+				else if (color == "y" || color == "yellow") color = 3;
+				else if (color == "v" || color == "violet") color = 4;
+				else if (color == "b" || color == "black") color = 5;
+				else return api.sendMessage("Bạn chưa nhập thông tin cá cược!, black [x0.5] red [x1] green [x1.25] yellow [x1.5] violet [x1.75] blue [x2]", threadID, messageID);
+				
+				if (color == 0 && check(random) == '💙') api.sendMessage(`Bạn đã chọn màu 💙, bạn đã thắng với số tiền được nhân lên 2: ${money * 2} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 2)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 2)), messageID);
+				else if (color == 1 && check(random) == '♥️') api.sendMessage(`Bạn đã chọn màu ♥️, bạn đã thắng với số tiền nhân lên 1.75: ${money * 1.75} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 1.75)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 1.75)), messageID);
+				else if (color == 2 && check(random) == '💚') api.sendMessage(`Bạn đã chọn màu 💚, bạn đã thắng với số tiền nhân lên 1.5: ${money * 1.5} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 1.5)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 1.5)), messageID);
+				else if (color == 3 && check(random) == '💛') api.sendMessage(`Bạn đã chọn màu 💛, bạn đã thắng với số tiền nhân lên 1.25: ${money * 1.25} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 1.25)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 1.25)), messageID);
+				else if (color == 4 && check(random) == '💜') api.sendMessage(`Bạn đã chọn màu 💜, bạn đã thắng với số tiền nhân lên 1: ${money} đô\nSố tiền hiện tại của bạn là: ${moneydb + money} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
+				else if (color == 5 && check(random) == '🖤️') api.sendMessage(`Bạn đã chọn màu 🖤️, bạn đã thắng với số tiền nhân lên 0.5: ${money * 0.5} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 0.5)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 0.5)), messageID);
 				else api.sendMessage(`Màu ${check(random)}\nBạn đã ra đê ở và mất trắng số tiền: ${money} đô :'(\nSố tiền hiện tại của bạn là: ${moneydb - money} đô.`, threadID, () => Economy.subtractMoney(senderID, money), messageID)
 			});
 		}

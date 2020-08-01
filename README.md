@@ -65,6 +65,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.4.0: thêm User.setUser, User.delUser, User.getColumn, Thread.setThread, Thread.delThread, thêm cột name trong database (cần xóa database cũ rồi thêm lại), thêm lệnh gRank (global rank của cả bot)
 
+- 4.4.1: sửa lỗi roul không báo sai màu
+
 </details>
 
 # Installation
