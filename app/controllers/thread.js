@@ -15,7 +15,7 @@ module.exports = function({ models, api }) {
 	}
 
 	function setThread(threadID, options = {}) {
-		return Tbread.findOne({
+		return Thread.findOne({
 			where: {
 				threadID
 			}
@@ -31,7 +31,7 @@ module.exports = function({ models, api }) {
 	}
 
 	function delThread(threadID) {
-		return Tbread.findOne({
+		return Thread.findOne({
 			where: {
 				threadID
 			}

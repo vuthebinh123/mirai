@@ -722,7 +722,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//random màu cho theme chat
 		if (contentMessage == `${prefix}randomcolor`) {
 			var color = ['196241301102133', '169463077092846', '2442142322678320', '234137870477637', '980963458735625', '175615189761153', '2136751179887052', '2058653964378557', '2129984390566328', '174636906462322', '1928399724138152', '417639218648241', '930060997172551', '164535220883264', '370940413392601', '205488546921017', '809305022860427'];
-			return api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID, (err) => (err) ? return api.sendMessage('Đã có lỗi không mong muốn đã xảy ra', threadID, messageID) : '');
+			return api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID, (err) => (err) ? api.sendMessage('Đã có lỗi không mong muốn đã xảy ra', threadID, messageID) : '');
 		}
 
 		//poll
