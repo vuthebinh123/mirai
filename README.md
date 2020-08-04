@@ -67,6 +67,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.4.1: sửa lỗi roul không báo sai màu
 
+- 4.4.2: sửa sl và money
+
 </details>
 
 # Installation

@@ -1324,7 +1324,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//money
 		if (contentMessage.indexOf(`${prefix}money`) == 0) {
-			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
+			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
 			var mention = Object.keys(event.mentions)[0];
 			if (!content) return Economy.getMoney(senderID).then((moneydb) => api.sendMessage(`Số tiền của bạn hiện đang có là: ${moneydb} đô`, threadID, messageID));
 			else if (content.indexOf("@") !== -1)
@@ -1437,7 +1437,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				if (money < 50) return api.sendMessage(`Số tiền đặt cược của bạn quá nhỏ, tối thiểu là 50 đô!`, threadID, messageID);
 				let number = [];
 				for (i = 0; i < 3; i++) number[i] = Math.floor(Math.random() * slotItems.length);
-				if ((number[0] == number[1]) == number[2]) {
+				if (number[0] == number[1] && number[1] == number[2]) {
 					money *= 9;
 					win = true;
 				}
