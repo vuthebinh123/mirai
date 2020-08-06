@@ -76,7 +76,7 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 ## Yêu cầu:
   - [NodeJS](https://nodejs.org/en/) và git(không bắt buộc)
   - Trình độ sử dụng NodeJS ở mức trung bình
-  - Một tài khoản Facebook dùng để làm bot
+  - Một tài khoản Facebook dùng để làm bot(Khuyên nên sử dụng acc đã bỏ hoặc không còn sử dụng để tránh mất acc hay acc bị khoá!!)
  
 ## Cài đặt (Linux/macOS/WSL/Windows đã cài windows-build-tools):
 + Step 1: Clone hoặc download project, nếu máy bạn có git hãy sử dụng lệnh:
@@ -97,8 +97,16 @@ node login.js
 npm start
 ```
 
-## Video hướng dẫn deploy và sử dụng trên Glitch:
-[![Tutorial](https://img.youtube.com/vi/wbfAxyV4n_o/0.jpg)](https://www.youtube.com/watch?v=wbfAxyV4n_o)
+## Video hướng dẫn deploy và sử dụng Mirai Bot:
+
+-  Hướng dẫn dành cho Glitchs:
+
+[![Tutorial for Glitchs](https://img.youtube.com/vi/wbfAxyV4n_o/0.jpg)](https://www.youtube.com/watch?v=wbfAxyV4n_o)
+
+- Hướng dẫn dành cho Windows 10:
+
+[![Tutorial for Window 10](https://img.youtube.com/vi/NGxyB6TRX9Q/0.jpg)](https://www.youtube.com/watch?v=NGxyB6TRX9Q)
+
 
 ## Deployment
 Click this button:
@@ -118,6 +126,6 @@ This project is licensed under the GNU General Public License v3.0 License - see
 	<summary></summary>
 
   ```
-  địt con mẹ mày, đéo sài thì cút bố đéo cần mày sân si, con đĩ nứng lồn 👌
+  Project này không liên kết với bất cứ project nào khác chẳng hạn như c3c!!!
   ```
 </details>
