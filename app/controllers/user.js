@@ -3,13 +3,18 @@ module.exports = function({ models, api }) {
 	const User = models.use('user');
 
 	function createUser(id) {
-		api.getUserInfo(id, (err, result) => {
-			if (err) return logger(err, 2);
-			var name = result[id].name;
-			User.findOrCreate({ where: { uid: id }, defaults: { name } }).then(([user, created]) => {
-				if (created) logger(id, 'New User');
-			}).catch((error) => logger(error, 2))
-		})
+		getName(id).then((nameUser) => {
+			if (nameUser) return;
+			api.getUserInfo(id, (err, result) => {
+				if (err) return logger(err, 2);
+				var name = result[id].name;
+				var inventory = JSON.stringify('{"fish1": 0,"fish2": 0,"trash": 0,"crabs": 0,"crocodiles": 0,"whales": 0,"dolphins": 0,"blowfish": 0,"squid": 0,"sharks": 0}');
+				var stats = JSON.stringify('{"casts": 0,"fish1": 0,"fish2": 0,"trash": 0,"crabs": 0,"crocodiles": 0,"whales": 0,"dolphins": 0,"blowfish": 0,"squid": 0,"sharks": 0}');
+				User.findOrCreate({ where: { uid: id }, defaults: { name, inventory, stats } }).then(([user, created]) => {
+					if (created) logger(id, 'New User');
+				}).catch((error) => logger(error, 2))
+			})
+		});
 	}
 
 	function setUser(uid, options = {}) {

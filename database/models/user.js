@@ -43,7 +43,18 @@ module.exports = function ({ sequelize, Sequelize }) {
 		hentaiLeft: {
 			type: Sequelize.INTEGER,
 			defaultValue: 2
+		},
+		lastTimeFishing: {
+			type: Sequelize.BIGINT,
+			defaultValue: 0
+		},
+		inventory: {
+			type: Sequelize.JSON,
+		},
+		stats: {
+			type: Sequelize.JSON,
 		}
+		
 	});
 	return User;
 }

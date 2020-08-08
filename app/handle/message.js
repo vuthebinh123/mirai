@@ -1,4 +1,4 @@
-module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, Economy }) {
+module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, Economy, Fishing }) {
 	/* ================ Config ==================== */
 	let {prefix, canCheckUpdate, googleSearch, wolfarm, yandex, openweather, tenor, saucenao, waketime, sleeptime, admins, ENDPOINT, nsfwGodMode} = config;
 	const fs = require("fs-extra");
@@ -1487,6 +1487,119 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					id: mention
 				}]
 			}, threadID, () => Economy.setMoney(mention, parseInt(moneySet)), messageID);
+		}
+
+		//fishing
+		if (contentMessage.indexOf(`${prefix}fishing`) == 0) {
+			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
+			(async () => {
+				if (content.indexOf('caught') == 0) {
+					let moneydb = await Economy.getMoney(senderID);
+					let inventory = await Fishing.getInventory(senderID);
+					let stats = await Fishing.getStats(senderID);
+					let lastTimeFishing = await Fishing.lastTimeFishing(senderID);
+					if (new Date() - new Date(lastTimeFishing) >= 5000 && moneydb >= 10) {
+						var roll = Math.floor(Math.random() * 1008); //rolls number 0-1007
+						if (roll <= 500) {
+							var arrayTrash = ["🏐","💾","📎","🥖","🦴","🥾","🥾","🌂"];
+							var trashRoll = Math.floor(Math.random() * 8);
+							lastTimeFishing = new Date();
+							inventory.trash += 1;
+							stats.trash += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage(arrayTrash[trashRoll] + ' | Oh, xung quanh bạn toàn là rác êii', threadID, messageID);
+						} else if (roll > 500 && roll <= 900) {
+							lastTimeFishing = new Date();
+							inventory.fish1 += 1;
+							stats.fish1 += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage('🐟 | Bạn đã bắn được một con cá cỡ bình thường 😮', threadID, messageID);
+						} else if (roll > 900 && roll <= 1000) {
+							lastTimeFishing = new Date();
+							inventory.fish1 += 1;
+							stats.fish1 += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage('🐠 | Bạn đã bắn được một con cá hiếm 😮', threadID, messageID);
+						} else if (roll == 1001) {
+							lastTimeFishing = new Date();
+							inventory.crabs += 1;
+							stats.crabs += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage('🦀 | Bạn đã bắn được một con cua siêu to khổng lồ 😮', threadID, messageID);
+						} else if (roll == 1002) {
+							lastTimeFishing = new Date();
+							inventory.crocodiles += 1;
+							stats.crocodiles += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage('🐊 | Bạn đã bắn được một con cá sấu đẹp trai hơn cả bạn 😮', threadID, messageID);
+						} else if (roll == 1003) {
+							lastTimeFishing = new Date();
+							inventory.whales += 1;
+							stats.whales += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage('🐋 | Bạn đã bắn được một con cá voi siêu to khổng lồ 😮', threadID, messageID);
+						} else if (roll == 1004) {
+							lastTimeFishing = new Date();
+							inventory.dolphins += 1;
+							stats.dolphins += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage('🐬 | Damn bro, tại sao bạn lại bắt một con cá heo dễ thương thế kia 😱', threadID, messageID);
+						} else if (roll == 1005) {
+							lastTimeFishing = new Date();
+							inventory.blowfish += 1;
+							stats.blowfish += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage('🐡 | Bạn đã bắt được một con cá nóc *insert meme cá nóc ăn carot .-.*', threadID, messageID);
+						} else if (roll == 1006) {
+							lastTimeFishing = new Date();
+							inventory.squid += 1;
+							stats.squid += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage('🦑 | Bạn đã bắt được một con mực 🤤', threadID, messageID);
+						} else if (roll == 1007) {
+							lastTimeFishing = new Date();
+							inventory.sharks += 1;
+							stats.sharks += 1;
+							stats.casts += 1;
+							await updateLastTimeFishing(senderID, lastTimeFishing)
+							await updateStats(senderID, Stats)
+							await Economy.subtractMoney(senderID, parseInt(10));
+							api.sendMessage('🦈 | Bạn đã bắt được một con cá mập nhưng không mập 😲', threadID, messageID);
+						} else if (new Date() - new Date(fishing.lastFish) <= 5000) {
+							api.sendMessage('Bạn chỉ được câu cá mỗi 5 giây một lần, vui lòng không spam .-.', threadID, messageID);
+						} else if (moneydb <= 10) {
+							api.sendMessage('Bạn không đủ 10 đô để câu cá, hãy làm rồi mới có ăn nha!!, số tiền hiện bạn đang có là: ' + moneydb + ' đô', threadID, messageID);
+						}
+					}
+				}
+			})();
 		}
 
 		//Check if command is correct
