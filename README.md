@@ -69,6 +69,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.4.2: sửa sl và money
 
+- 4.5.0 : thêm lệnh fishing, khắc phục tình trạng bị block tính năng sau khi bị các thành viên spam, lòi ra thêm database is locked!!
+
 </details>
 
 # Installation

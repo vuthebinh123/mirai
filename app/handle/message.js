@@ -1493,12 +1493,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}fishing`) == 0) {
 			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			(async () => {
-				if (content.indexOf('caught') == 0) {
+				if (!content || content.indexOf('c') == 0) {
 					let moneydb = await Economy.getMoney(senderID);
 					let inventory = await Fishing.getInventory(senderID);
 					let stats = await Fishing.getStats(senderID);
 					let lastTimeFishing = await Fishing.lastTimeFishing(senderID);
-					if (new Date() - new Date(lastTimeFishing) >= 5000 && moneydb >= 10) {
+					if (new Date() - new Date(lastTimeFishing) >= 5000) {
 						var roll = Math.floor(Math.random() * 1008); //rolls number 0-1007
 						if (roll <= 500) {
 							var arrayTrash = ["🏐","💾","📎","🥖","🦴","🥾","🥾","🌂"];
@@ -1508,7 +1508,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							stats.trash += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage(arrayTrash[trashRoll] + ' | Oh, xung quanh bạn toàn là rác êii', threadID, messageID);
 						} else if (roll > 500 && roll <= 900) {
@@ -1517,52 +1518,58 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							stats.fish1 += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
-							api.sendMessage('🐟 | Bạn đã bắn được một con cá cỡ bình thường 😮', threadID, messageID);
+							api.sendMessage('🐟 | Bạn đã bắt được một con cá cỡ bình thường 😮', threadID, messageID);
 						} else if (roll > 900 && roll <= 1000) {
 							lastTimeFishing = new Date();
 							inventory.fish1 += 1;
 							stats.fish1 += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
-							api.sendMessage('🐠 | Bạn đã bắn được một con cá hiếm 😮', threadID, messageID);
+							api.sendMessage('🐠 | Bạn đã bắt được một con cá hiếm 😮', threadID, messageID);
 						} else if (roll == 1001) {
 							lastTimeFishing = new Date();
 							inventory.crabs += 1;
 							stats.crabs += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
-							api.sendMessage('🦀 | Bạn đã bắn được một con cua siêu to khổng lồ 😮', threadID, messageID);
+							api.sendMessage('🦀 | Bạn đã bắt được một con cua siêu to khổng lồ 😮', threadID, messageID);
 						} else if (roll == 1002) {
 							lastTimeFishing = new Date();
 							inventory.crocodiles += 1;
 							stats.crocodiles += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
-							api.sendMessage('🐊 | Bạn đã bắn được một con cá sấu đẹp trai hơn cả bạn 😮', threadID, messageID);
+							api.sendMessage('🐊 | Bạn đã bắt được một con cá sấu đẹp trai hơn cả bạn 😮', threadID, messageID);
 						} else if (roll == 1003) {
 							lastTimeFishing = new Date();
 							inventory.whales += 1;
 							stats.whales += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
-							api.sendMessage('🐋 | Bạn đã bắn được một con cá voi siêu to khổng lồ 😮', threadID, messageID);
+							api.sendMessage('🐋 | Bạn đã bắt được một con cá voi siêu to khổng lồ 😮', threadID, messageID);
 						} else if (roll == 1004) {
 							lastTimeFishing = new Date();
 							inventory.dolphins += 1;
 							stats.dolphins += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🐬 | Damn bro, tại sao bạn lại bắt một con cá heo dễ thương thế kia 😱', threadID, messageID);
 						} else if (roll == 1005) {
@@ -1571,7 +1578,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							stats.blowfish += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🐡 | Bạn đã bắt được một con cá nóc *insert meme cá nóc ăn carot .-.*', threadID, messageID);
 						} else if (roll == 1006) {
@@ -1580,7 +1588,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							stats.squid += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🦑 | Bạn đã bắt được một con mực 🤤', threadID, messageID);
 						} else if (roll == 1007) {
@@ -1589,18 +1598,145 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							stats.sharks += 1;
 							stats.casts += 1;
 							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
-							await Fishing.updateStats(senderID, Stats)
+							await Fishing.updateInventory(senderID, inventory)
+							await Fishing.updateStats(senderID, stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🦈 | Bạn đã bắt được một con cá mập nhưng không mập 😲', threadID, messageID);
-						} else if (new Date() - new Date(fishing.lastFish) <= 5000) {
-							api.sendMessage('Bạn chỉ được câu cá mỗi 5 giây một lần, vui lòng không spam .-.', threadID, messageID);
-						} else if (moneydb <= 10) {
-							api.sendMessage('Bạn không đủ 10 đô để câu cá, hãy làm rồi mới có ăn nha!!, số tiền hiện bạn đang có là: ' + moneydb + ' đô', threadID, messageID);
-						}
+						} 
+					} else if (new Date() - new Date(lastTimeFishing) <= 5000) api.sendMessage('Bạn chỉ được câu cá mỗi 5 giây một lần, vui lòng không spam .-.', threadID, messageID);
+					 else if (moneydb < 10) api.sendMessage('Bạn không đủ 10 đô để câu cá, hãy làm rồi mới có ăn nha!!, số tiền hiện bạn đang có là: ' + moneydb + ' đô', threadID, messageID);
+				} else if (content.indexOf('túi') == 0) {
+					let inventory = await Fishing.getInventory(senderID);
+					var a = inventory.trash
+					var b = inventory.fish1
+					var c = inventory.fish2
+					var d = inventory.crabs
+					var e = inventory.crocodiles
+					var f = inventory.whales
+					var g = inventory.dolphins
+					var h = inventory.blowfish
+					var i = inventory.squid
+					var j = inventory.sharks
+					var total = a*1 + b*20 + c*30 + d*500 + e*500 + f*750 + g*750 + h*500 + i*1000 + j*1000;
+					api.sendMessage(
+						"===== Inventory Của Bạn =====" +
+						"\n- Số lượng:" +
+						"\n+ Rác | 🗑️: " + a +
+						"\n+ Cá cỡ bình thường | 🐟: " + b +
+						"\n+ Cá hiếm | 🐠: " + c +
+						"\n+ Cua | 🦀: " + d +
+						"\n+ Cá Sấu | 🐊: " + e +
+						"\n+ Cá voi | 🐋: " + f +
+						"\n+ Cá heo | 🐬: " + g +
+						"\n+ Cá nóc | 🐡: " + h +
+						"\n+ Mực | 🦑: " + i +
+						"\n+ Cá mập | 🦈: " + j +
+						"\n- Tổng số tiền bạn có thể thu được sau khi bán: " +  total + " đô "
+					, threadID, messageID);
+				} else if (content.indexOf('sell') == 0) {
+					var choose = content.split(' ')[1];
+					let inventory = await Fishing.getInventory(senderID);
+					if (choose != null && choose == 'trash' || choose == '1') {
+						var y = inventory.trash
+						inventory.trash = 0
+						var money = parseInt(1 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' rác và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'common' || choose == '2') {
+						var y = inventory.fish1
+						inventory.fish1 = 0
+						var money = parseInt(20 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' loại cá bình thường và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'rare' || choose == '3') {
+						var y = inventory.fish2
+						inventory.fish2 = 0
+						var money = parseInt(30 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' loại cá hiếm và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'crabs' || choose == '4') {
+						var y = inventory.crabs
+						inventory.crabs = 0
+						var money = parseInt(500 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cua và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'crocodiles' || choose == '5') {
+						var y = inventory.crocodiles
+						inventory.crocodiles = 0
+						var money = parseInt(500 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá sấu và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'whales' || choose == '6') {
+						var y = inventory.whales
+						inventory.whales = 0
+						var money = parseInt(750 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá voi và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'dolphins' || choose == '7') {
+						var y = inventory.dophins
+						inventory.dophins = 0
+						var money = parseInt(750 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá heo và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'blowfish' || choose == '8') {
+						var y = inventory.blowfish
+						inventory.blowfish = 0
+						var money = parseInt(500 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá nóc và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'squid' || choose == '9') {
+						var y = inventory.squid
+						inventory.squid = 0
+						var money = parseInt(1000 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con mực và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'sharks' || choose == '10') {
+						var y = inventory.sharks
+						inventory.sharks = 0
+						var money = parseInt(1000 * y);
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, money);
+						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá mập và nhận được ' + money + ' đô', threadID, messageID);
+					} else if (choose != null && choose == 'all') {
+						var a = inventory.trash
+						var b = inventory.fish1
+						var c = inventory.fish2
+						var d = inventory.crabs
+						var e = inventory.crocodiles
+						var f = inventory.whales
+						var g = inventory.dolphins
+						var h = inventory.blowfish
+						var i = inventory.squid
+						var j = inventory.sharks
+						var z = a*1 + b*20 + c*30 + d*500 + e*500 + f*750 + g*750 + h*500 + i*1000 + j*1000;
+						inventory.trash = 0;
+						inventory.fish1 = 0;
+						inventory.fish2 = 0;
+						inventory.crabs = 0;
+						inventory.crocodiles = 0;
+						inventory.whales = 0;
+						inventory.dolphins = 0;
+						inventory.blowfish = 0;
+						inventory.squid = 0;
+						inventory.sharks = 0;
+						await Fishing.updateInventory(senderID, inventory)
+						await Economy.addMoney(senderID, parseInt(z));
+						api.sendMessage('🎣 | Bạn đã bán toàn bộ sản lượng trong túi và thu về được ' + z + ' đô', threadID, messageID);
 					}
 				}
 			})();
+			return;
 		}
+		
 
 		//Check if command is correct
 		if (contentMessage.indexOf(prefix) == 0) {

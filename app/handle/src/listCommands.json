@@ -432,5 +432,12 @@
 		"usage":"sauce và reply ảnh cần tìm",
 		"example":"sauce",
 		"group":"media"
+	},
+	{
+		"name":"fishing",
+		"decs":"Câu cá giải trí ngay chính nhóm của bạn :D.",
+		"usage":"fishing[túi,sell]",
+		"example":"fishing túi",
+		"group":"economy"
 	}
 ]
