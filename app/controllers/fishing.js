@@ -93,6 +93,8 @@ module.exports = function({ models, api }) {
 			lastTimeFishing,
 			updateLastTimeFishing,
 			getInventory,
-			updateInventory
+			updateInventory,
+			getStats,
+			updateStats
 	};
 };
