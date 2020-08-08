@@ -1507,8 +1507,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.trash += 1;
 							stats.trash += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage(arrayTrash[trashRoll] + ' | Oh, xung quanh bạn toàn là rác êii', threadID, messageID);
 						} else if (roll > 500 && roll <= 900) {
@@ -1516,8 +1516,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.fish1 += 1;
 							stats.fish1 += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🐟 | Bạn đã bắn được một con cá cỡ bình thường 😮', threadID, messageID);
 						} else if (roll > 900 && roll <= 1000) {
@@ -1525,8 +1525,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.fish1 += 1;
 							stats.fish1 += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🐠 | Bạn đã bắn được một con cá hiếm 😮', threadID, messageID);
 						} else if (roll == 1001) {
@@ -1534,8 +1534,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.crabs += 1;
 							stats.crabs += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🦀 | Bạn đã bắn được một con cua siêu to khổng lồ 😮', threadID, messageID);
 						} else if (roll == 1002) {
@@ -1543,8 +1543,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.crocodiles += 1;
 							stats.crocodiles += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🐊 | Bạn đã bắn được một con cá sấu đẹp trai hơn cả bạn 😮', threadID, messageID);
 						} else if (roll == 1003) {
@@ -1552,8 +1552,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.whales += 1;
 							stats.whales += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🐋 | Bạn đã bắn được một con cá voi siêu to khổng lồ 😮', threadID, messageID);
 						} else if (roll == 1004) {
@@ -1561,8 +1561,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.dolphins += 1;
 							stats.dolphins += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🐬 | Damn bro, tại sao bạn lại bắt một con cá heo dễ thương thế kia 😱', threadID, messageID);
 						} else if (roll == 1005) {
@@ -1570,8 +1570,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.blowfish += 1;
 							stats.blowfish += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🐡 | Bạn đã bắt được một con cá nóc *insert meme cá nóc ăn carot .-.*', threadID, messageID);
 						} else if (roll == 1006) {
@@ -1579,8 +1579,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.squid += 1;
 							stats.squid += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🦑 | Bạn đã bắt được một con mực 🤤', threadID, messageID);
 						} else if (roll == 1007) {
@@ -1588,8 +1588,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							inventory.sharks += 1;
 							stats.sharks += 1;
 							stats.casts += 1;
-							await updateLastTimeFishing(senderID, lastTimeFishing)
-							await updateStats(senderID, Stats)
+							await Fishing.updateLastTimeFishing(senderID, lastTimeFishing)
+							await Fishing.updateStats(senderID, Stats)
 							await Economy.subtractMoney(senderID, parseInt(10));
 							api.sendMessage('🦈 | Bạn đã bắt được một con cá mập nhưng không mập 😲', threadID, messageID);
 						} else if (new Date() - new Date(fishing.lastFish) <= 5000) {
