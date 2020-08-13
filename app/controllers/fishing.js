@@ -51,7 +51,7 @@ module.exports = function({ models, api }) {
 			}
 		}).then(function(user) {
 			if (!user) return;
-			return user.update({ inventory: inventory });
+			return user.update({ inventory: JSON.stringify(inventory) });
 		}).then(function() {
 			return true;
 		}).catch(function(error) {
@@ -80,7 +80,7 @@ module.exports = function({ models, api }) {
 			}
 		}).then(function(user) {
 			if (!user) return;
-			return user.update({ stats: stats });
+			return user.update({ stats: JSON.stringify(stats) });
 		}).then(function() {
 			return true;
 		}).catch(function(error) {

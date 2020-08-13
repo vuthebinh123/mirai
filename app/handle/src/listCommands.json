@@ -217,6 +217,13 @@
 		"group":"general"
 	},
 	{
+		"name":"mit",
+		"decs":"Trò chuyện cùng mitsuku",
+		"usage":"mit [nội dung tiếng anh]",
+		"example":"mit hello there",
+		"group":"general"
+	},
+	{
 		"name":"request",
 		"decs":"Yêu cầu admin thêm thứ gì đó vào bot",
 		"usage":"request [add,list] [Nội dung]",
@@ -439,5 +446,33 @@
 		"usage":"fishing[túi,sell]",
 		"example":"fishing túi",
 		"group":"economy"
+	},
+	{
+		"name": "fishing",
+		"decs": "Câu cá thôi",
+		"usage": "fishing",
+		"example": "fishing",
+		"group": "Economy"
+	},
+	{
+		"name": "fishing túi",
+		"decs": "Xem túi của bạn đã có những loại cá nào và số lượng mỗi loại",
+		"usage": "fishing [túi,inv]",
+		"example": "fishing túi",
+		"group": "Economy"
+	},
+	{
+		"name": "fishing sell",
+		"decs": "bán cá và rác sau khi bạn câu được!",
+		"usage": "fishing sell [theo số thứ tự trong fishing list hoặc all]",
+		"example": "fishing sell all",
+		"group": "Economy"
+	},
+	{
+		"name": "fishing list",
+		"decs": "xem giá thành cũng như số thứ tự của từng loại cá!",
+		"usage": "fishing list",
+		"example": "fishing list",
+		"group": "Economy"
 	}
 ]

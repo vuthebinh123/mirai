@@ -73,6 +73,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.5.1: clean fishing
 
+- 4.5.2: sửa fishing, thêm lệnh mit và thêm phần help command cho fishing!
+
 </details>
 
 # Installation
