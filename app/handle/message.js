@@ -720,7 +720,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}sim`) == 0) return request(`https://simsumi.herokuapp.com/api?text=${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}&lang=vi`, (err, response, body) => api.sendMessage((JSON.parse(body).success != '') ? JSON.parse(body).success : 'Không có câu trả nời nào.', threadID, messageID));
 
 		//mit
-		if (contentMessage.indexOf(`${prefix}mit`) == 0) return request(`https://kakko.pandorabots.com/pandora/talk-xml?input=${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}&botid=9fa364f2fe345a10&custid=${senderID}`, (err, response, body) => api.sendMessage((/<that>(.*?)<\/that>/.exec(body.data)[1]), threadID, messageID));
+		if (contentMessage.indexOf(`${prefix}mit`) == 0) return request(`https://kakko.pandorabots.com/pandora/talk-xml?input=${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}&botid=9fa364f2fe345a10&custid=${threadID}`, (err, response, body) => api.sendMessage((/<that>(.*?)<\/that>/.exec(body)[1]), threadID, messageID));
 
 		//random màu cho theme chat
 		if (contentMessage == `${prefix}randomcolor`) {
