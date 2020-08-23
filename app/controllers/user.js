@@ -10,7 +10,7 @@ module.exports = function({ models, api }) {
 				var name = result[id].name;
 				var inventory = {"fish1": 0,"fish2": 0,"trash": 0,"crabs": 0,"crocodiles": 0,"whales": 0,"dolphins": 0,"blowfish": 0,"squid": 0,"sharks": 0};
 				var stats = {"casts": 0,"fish1": 0,"fish2": 0,"trash": 0,"crabs": 0,"crocodiles": 0,"whales": 0,"dolphins": 0,"blowfish": 0,"squid": 0,"sharks": 0};
-				User.findOrCreate({ where: { uid: id }, defaults: { name, inventory: JSON.stringify(inventory), stats: JSON.stringify(stats) } }).then(([user, created]) => {
+				User.findOrCreate({ where: { uid: id }, defaults: { name, inventory: JSON.stringify(inventory), stats: JSON.stringify(stats), reasonafk: "" } }).then(([user, created]) => {
 					if (created) logger(id, 'New User');
 				}).catch((error) => logger(error, 2))
 			})
@@ -112,6 +112,53 @@ module.exports = function({ models, api }) {
 		return unban(uid, true);
 	}
 
+	function nonafk(uid, mode = false) {
+		return User.findOne({
+			where: {
+				uid
+			}
+		}).then(function(user) {
+			if (!user) return;
+			return user.update({ afk: mode });
+		}).then(function() {
+			return true;
+		}).catch(function(error) {
+			logger(error, 2);
+			return false;
+		})
+	}
+
+	function afk(uid) {
+		return nonafk(uid, true);
+	}
+
+	function getReason(uid) {
+		return User.findOne({
+			where: {
+				uid
+			}
+		}).then(function(user) {
+			if (!user) return;
+			return user.get({ plain: true }).reasonafk;
+		});
+	}
+
+	function updateReason(uid, reason) {
+		return User.findOne({
+			where: {
+				uid
+			}
+		}).then(function(user) {
+			if (!user) return;
+			return user.update({ reasonafk: reason });
+		}).then(function() {
+			return true;
+		}).catch(function(error) {
+			logger(error, 2);
+			return false;
+		});
+	}
+
 	return {
 		createUser,
 		setUser,
@@ -122,6 +169,10 @@ module.exports = function({ models, api }) {
 		getName,
 		getGender,
 		unban,
-		ban
+		ban,
+		afk,
+		nonafk,
+		getReason,
+		updateReason
 	}
 }

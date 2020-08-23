@@ -89,6 +89,31 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			msgBody: contentMessage
 		});
 
+		if (event.mentions) {
+			var mentions = Object.keys(event.mentions);
+			return mentions.forEach(mention => {
+				if (__GLOBAL.afkUser.includes(parseInt(mention))) {
+					(async () => {
+						var reason = await User.getReason(Object.keys(event.mentions));
+						var name = await User.getName(Object.keys(event.mentions));
+						(reason == "none") ? api.sendMessage(`${name} Hiện tại đang bận!`, threadID, messageID) : api.sendMessage(`${name} Hiện tại đang bận với lý do: ${reason}`, threadID, messageID);
+					})();
+				}
+			});
+		}
+
+		if (__GLOBAL.afkUser.includes(parseInt(senderID))) {
+			(async () => {
+				await User.nonafk(senderID);
+				await User.updateReason(senderID, "");
+				__GLOBAL.afkUser.splice(__GLOBAL.afkUser.indexOf(senderID), 1);
+				var name = await User.getName(event.from);
+				return api.sendMessage(`Chào mừng bạn đã quay trở lại, ${name}`, threadID);
+			})();
+		}
+
+		if (!contentMessage) return;
+
 	/* ================ Staff Commands ==================== */
 		//lấy shortcut
 		if (contentMessage.length !== -1) {
@@ -136,6 +161,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var content = contentMessage.slice(prefix.length + 12, contentMessage.length);
 			if (!content) return api.sendMessage("Hãy nhập lệnh cần cấm!", threadID, messageID);
 			var jsonData = JSON.parse(fs.readFileSync(__dirname + "/src/cmds.json"));
+			if (content == "list") {
+				return api.sendMessage(`Đây là danh sách các command hiện đang bị ban tại group này: ${nocmdData.banned.find(item => item.id == threadID).cmds}`, threadID, messageID);
+			}
 			if (!jsonData.cmds.includes(content)) return api.sendMessage("Không có lệnh " + content + " trong cmds.json nên không thể cấm", threadID, messageID);
 			else {
 				if (jsonData.banned.some(item => item.id == threadID)) {
@@ -310,12 +338,38 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//restart
 		if (contentMessage == `${prefix}restart` && admins.includes(senderID)) return api.sendMessage(`Hệ thống restart khẩn ngay bây giờ!!`, threadID, () => require("node-cmd").run("pm2 restart 0"), messageID);
 
+		//admin command
+		if (contentMessage.indexOf(`${prefix}admin`) == 0) {
+			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
+			if (content.indexOf("all") == 0) {
+				var helpList = JSON.parse(fs.readFileSync(__dirname + "/src/help/listCommandAdmin.json"));
+				var commandAdmin = [];
+				helpList.forEach(help => (!commandAdmin.some(item => item.name == help.name)) ? commandAdmin.push(help.name) : commandAdmin.find(item => item.name == help.name).push(help.name));
+				return api.sendMessage(commandAdmin.join(', '), threadID, messageID);
+			}
+			else if (content.indexOf("help") == 0) {
+				var helpCommand = content.slice(5, content.length);
+				if (helpList.some(item => item.name == helpCommand))
+					return api.sendMessage(
+						'=== Thông tin lệnh bạn đang tìm ===\n' +
+						'- Tên lệnh: ' + helpList.find(item => item.name == helpCommand).name + '\n' +
+						'- Thông tin: ' + helpList.find(item => item.name == helpCommand).decs + '\n' +
+						'- Cách dùng: ' + prefix + helpList.find(item => item.name == helpCommand).usage + '\n' +
+						'- Hướng dẫn: ' + prefix + helpList.find(item => item.name == helpCommnand).example,
+						threadID, messageID
+					);
+				else return api.sendMessage(`Lệnh bạn nhập không hợp lệ, hãy gõ ${prefix}help để xem tất cả các lệnh có trong bot.`, threadID, messageID);
+			} else if (content.indexOf("listThread") == 0) {
+			
+			}
+		}
+
 	/* ==================== Help Commands ================*/
 
 		//help
 		if (contentMessage.indexOf(`${prefix}help`) == 0) {
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
-			var helpList = JSON.parse(fs.readFileSync(__dirname + "/src/listCommands.json"));
+			var helpList = JSON.parse(fs.readFileSync(__dirname + "/src/help/listCommands.json"));
 			if (content.length == 0) {
 				var helpGroup = [];
 				var helpMsg = "";
@@ -447,7 +501,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			}
 			return request(data[content], (error, response, body) => {
 				let picData = JSON.parse(body);
-				let getURL = picData.url;
+				let getURL = picData.data.response.url;
 				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
 				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID));
 			});
@@ -574,6 +628,20 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID);
 				};
 				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", callback);
+			});
+
+		//meow
+		if (contentMessage.indexOf(`${prefix}meow`) == 0)
+			return request('http://aws.random.cat/meow', (err, response, body) =>{
+				let picData = JSON.parse(body);
+				let getURL = picData.file;
+				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
+				let callback = function() {
+					api.sendMessage({
+						attachment: fs.createReadStream(__dirname + `/src/meow.${ext}`)
+					}, threadID, () => fs.unlinkSync(__dirname + `/src/meow.${ext}`), messageID);
+				};
+				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/meow.${ext}`)).on("close", callback);
 			});
 
 		//sauce
@@ -898,10 +966,10 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				api.sendMessage(msg, threadID, messageID);
 			})();
 
-		//dịch ngôn ngữ
+		//dịch ngôn ngữ
 		if (contentMessage.indexOf(`${prefix}trans`) == 0) {
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
-			if (content.length == 0 && event.type != "message_reply") return api.sendMessage(`Bạn chưa nhập thông tin, vui lòng đọc ${prefix}help để biết thêm chi tiết!`, threadID,messageID);
+			if (content.length == 0 && event.type != "message_reply") return api.sendMessage(`Bạn chưa nhập thông tin, vui lòng đọc ${prefix}help để biết thêm chi tiết!`, threadID,messageID);
 			var translateThis = content.slice(0, content.indexOf(" ->"));
 			var lang = content.substring(content.indexOf(" -> ") + 4);
 			if (event.type == "message_reply") {
@@ -913,11 +981,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				translateThis = content.slice(0, content.length)
 				lang = 'vi';
 			}
-			return request(encodeURI(`https://translate.yandex.net/api/v1.5/tr.json/translate?key=${yandex}&text=${translateThis}&lang=${lang}`), (err, response, body) => {
+			return request(encodeURI(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${translateThis}`), (err, response, body) => {
 				if (err) return api.sendMessage("Đã có lỗi xảy ra!", threadID, messageID)
 				var retrieve = JSON.parse(body);
-				var fromLang = retrieve.lang.split("-")[0];
-				api.sendMessage(`Bản dịch: ${retrieve.text[0]}\n${fromLang} -> ${lang}`, threadID, messageID);
+				var fromLang = retrieve[0][0][8][0][0][1].split("_")[0];
+				api.sendMessage(`Bản dịch: ${retrieve[0][0][0]}\n - được dịch từ ${fromLang} sang ${lang}`, threadID, messageID);
 			});
 		}
 
@@ -963,26 +1031,19 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//ping
 		if (contentMessage == `${prefix}ping`)
 			return api.getThreadInfo(threadID, (err, info) => {
-				if (err) return api.sendMessage("Đã có lỗi xảy ra", threadID, messageID);
-				var icons = ["🥂","🎉","🌏","💥","💖","👏🏿","💪","❗️","❤️"];
+				if (err) return api.sendMessage('Đã có lỗi xảy ra!.', threadID, messageID);
 				var ids = info.participantIDs;
-				var botid = api.getCurrentUserID();
-				var callid = {
-					body: "Ping" + icons[Math.floor(Math.random() * icons.length)],
-					mentions: [{
-						tag: `${botid}`,
-						id: botid
-					}]
-				};
-				ids.forEach(id => {
-					if (id != botid) {
-						callid.mentions.push({
-							tag: `${id}`,
-							id: id
-						});
-					}
-				});
-				api.sendMessage(callid, threadID, messageID);
+				ids.splice(ids.indexOf(botid), 1);
+				var body = '@everyone', mentions = [];
+				for (let i = 0; i < ids.length; i++) {
+					if (i == body.length) body += 'e';
+					mentions.push({
+						tag: body[i],
+						id: ids[i],
+						fromIndex: i
+					});
+				}
+				api.sendMessage({body, mentions}, threadID, messageID);
 			});
 
 		//look earth
@@ -1040,6 +1101,23 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					"\n- Link Youtube: " + data.links.video_link,
 				threadID, messageID);
 			});
+		}
+
+		//afk
+		if (contentMessage.indexOf(`${prefix}afk`) == 0) {
+			(async () => {
+				var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
+				if (content) {
+					await User.updateReason(senderID, content);
+					return api.sendMessage(`🛠 | Bạn đã bật mode afk với lý do: ${content}`, threadID, messageID);
+				}
+				else {
+					await User.updateReason(senderID, 'none');
+					return api.sendMessage(`🛠 | Bạn đã bật mode afk`, threadID, messageID);
+				}
+				await User.afk(senderID);
+				__GLOBAL.afkUser.push(parseInt(senderID));
+			})();
 		}
 
 		/* ==================== Study Commands ==================== */
@@ -1253,7 +1331,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				request(data[content], (error, response, body) => {
 					if (useLeft != -1) Economy.subtractHentai(senderID);
 					let picData = JSON.parse(body);
-					let getURL = picData.url;
+					let getURL = picData.data.response.url;
 					let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
 					request(getURL).pipe(fs.createWriteStream(__dirname + `/src/hentai.${ext}`)).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + `/src/hentai.${ext}`)}, threadID, () => fs.unlinkSync(__dirname + `/src/hentai.${ext}`), messageID));
 				});
