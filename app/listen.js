@@ -35,9 +35,6 @@ module.exports = function({ api, models, __GLOBAL }) {
 			case "event":
 				handleEvent({ event });
 				break;
-			case "typ":
-				handleMessage({ event });
-				break;
 			default:
 				return;
 				break;

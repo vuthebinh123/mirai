@@ -77,7 +77,7 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.5.3: thêm lệnh còn thiếu vào file cmds.json
 
-- 4.6.0: thay api anime thành v3(steal hộ bố mày cái con Quỳnh ?), thêm afk command, meow, admin help và admin all ( đang làm!!)
+- 4.6.0: thay api anime thành v3(steal hộ bố mày cái ctml Hiếu ?), thêm afk command, meow, admin help và admin all ( đang làm!!)
 
 </details>
 
