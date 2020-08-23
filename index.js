@@ -12,7 +12,8 @@ const __GLOBAL = new Object({
 	userBlocked: new Array(),
 	messages: new Array(),
 	resendBlocked: new Array(),
-	NSFWBlocked: new Array()
+	NSFWBlocked: new Array(),
+	afkUser: new Array()
 });
 
 app.get("/", (request, response) => response.sendFile(__dirname + "/view/index.html"));

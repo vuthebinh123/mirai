@@ -12,6 +12,7 @@ module.exports = function({ api, models, __GLOBAL }) {
 		__GLOBAL.threadBlocked = (await Thread.getThreads({ block: true })).map(e => e.threadID);
 		__GLOBAL.resendBlocked = (await Thread.getThreads({ blockResend: true })).map(e => e.threadID);
 		__GLOBAL.NSFWBlocked = (await Thread.getThreads({ blockNSFW: true })).map(e => e.threadID);
+		__GLOBAL.afkUser = (await User.getUsers({ afk: true })).map(e => e.uid);
 		modules.log("Khởi tạo biến môi trường thành công!");
 	})();
 	const handleMessage = require("./handle/message")({ api, modules, config, __GLOBAL, User, Thread, Rank, Economy, Fishing });

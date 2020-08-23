@@ -474,5 +474,19 @@
 		"usage": "fishing list",
 		"example": "fishing list",
 		"group": "Economy"
+	},
+	{
+		"name": "meow",
+		"decs": "lệnh random những con mèo :D!",
+		"usage": "meow",
+		"example": "meow",
+		"group": "media"
+	},
+	{
+		"name": "afk",
+		"decs": "bật mode afk để người bạn của bạn biêt!",
+		"usage": "afk [lời nhắn]",
+		"example": "afk đi ngủ",
+		"group": "System"
 	}
 ]
