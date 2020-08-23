@@ -53,13 +53,6 @@ module.exports = function ({ sequelize, Sequelize }) {
 		},
 		stats: {
 			type: Sequelize.JSON,
-		},
-		afk: {
-			type: Sequelize.BOOLEAN,
-			defaultValue: false
-		},
-		reasonafk: {
-			type: Sequelize.STRING
 		}
 		
 	});
