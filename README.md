@@ -143,4 +143,4 @@ This project is licensed under the GNU General Public License v3.0 License - see
 </details>
 
 **cần lao vi tiên thủ. Năng cán dĩ đắc thực. Vô vi thực đầu buồi thực
-cứt. Địt mẹ bọn cu chưa mở mí mắt bên C_C Group luôn, steal hộ cái ?**
+cứt. Địt mẹ bọn cu chưa mở mí mắt bên C_C Group luôn, steal hộ cái mấy thằng đbrr?**
