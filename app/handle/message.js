@@ -91,13 +91,14 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		if (event.mentions) {
 			var mentions = Object.keys(event.mentions);
-			return mentions.forEach(mention => {
+			mentions.forEach(mention => {
 				if (__GLOBAL.afkUser.includes(parseInt(mention))) {
 					(async () => {
 						var reason = await User.getReason(Object.keys(event.mentions));
 						var name = await User.getName(Object.keys(event.mentions));
-						(reason == "none") ? api.sendMessage(`${name} Hiện tại đang bận!`, threadID, messageID) : api.sendMessage(`${name} Hiện tại đang bận với lý do: ${reason}`, threadID, messageID);
+						reason == "none" ? api.sendMessage(`${name} Hiện tại đang bận!`, threadID, messageID) : api.sendMessage(`${name} Hiện tại đang bận với lý do: ${reason}`, threadID, messageID);
 					})();
+					return;
 				}
 			});
 		}
@@ -107,8 +108,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				await User.nonafk(senderID);
 				await User.updateReason(senderID, "");
 				__GLOBAL.afkUser.splice(__GLOBAL.afkUser.indexOf(senderID), 1);
-				var name = await User.getName(event.from);
-				return api.sendMessage(`Chào mừng bạn đã quay trở lại, ${name}`, threadID);
+				var name = await User.getName(senderID);
+				return api.sendMessage(`Chào mừng bạn đã quay trở lại, ${name}`,threadID);
 			})();
 		}
 
@@ -339,10 +340,10 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage == `${prefix}restart` && admins.includes(senderID)) return api.sendMessage(`Hệ thống restart khẩn ngay bây giờ!!`, threadID, () => require("node-cmd").run("pm2 restart 0"), messageID);
 
 		//admin command
-		if (contentMessage.indexOf(`${prefix}admin`) == 0) {
+		if (contentMessage.indexOf(`${prefix}admin`) == 0 && admins.includes(senderID)) {
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
+			var helpList = JSON.parse(fs.readFileSync(__dirname + "/src/help/listAC.json"));
 			if (content.indexOf("all") == 0) {
-				var helpList = JSON.parse(fs.readFileSync(__dirname + "/src/help/listCommandAdmin.json"));
 				var commandAdmin = [];
 				helpList.forEach(help => (!commandAdmin.some(item => item.name == help.name)) ? commandAdmin.push(help.name) : commandAdmin.find(item => item.name == help.name).push(help.name));
 				return api.sendMessage(commandAdmin.join(', '), threadID, messageID);
@@ -1109,15 +1110,16 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
 				if (content) {
 					await User.updateReason(senderID, content);
-					return api.sendMessage(`🛠 | Bạn đã bật mode afk với lý do: ${content}`, threadID, messageID);
+					api.sendMessage(`🛠 | Bạn đã bật mode afk với lý do: ${content}`, threadID, messageID);
 				}
 				else {
 					await User.updateReason(senderID, 'none');
-					return api.sendMessage(`🛠 | Bạn đã bật mode afk`, threadID, messageID);
+					api.sendMessage(`🛠 | Bạn đã bật mode afk`, threadID, messageID);
 				}
 				await User.afk(senderID);
 				__GLOBAL.afkUser.push(parseInt(senderID));
 			})();
+			return;
 		}
 
 		/* ==================== Study Commands ==================== */
