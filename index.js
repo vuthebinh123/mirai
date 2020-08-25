@@ -44,6 +44,3 @@ sequelize.authenticate().then(
 	facebook({ Op, models });
 }).catch(e => logger(`${e.stack}`, 2));
 // Made by CatalizCS and SpermLord
-/*
-		CẶC CHƯA MỞ MẮT THÌ IM CON MẸ NÓ MỒM VÀO THẰNG ĐBRR GÁY BẨN MỖI TRONG GROUP MÀY THÔI À :)))))))
-*/

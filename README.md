@@ -138,7 +138,7 @@ This project is licensed under the GNU General Public License v3.0 License - see
 	<summary></summary>
 
   ```
-  Project này không liên kết với bất cứ project nào khác chẳng hạn như của ai đấy bảo project này steal :)))), lêu lêu mấy thằng đbrr
+  Project này không liên kết với bất cứ project nào khác!!
   ```
 </details>
 
