@@ -1,33 +1,31 @@
 module.exports = function ({ sequelize, Sequelize }) {
-	let User = sequelize.define('user', {
+	let Economy = sequelize.define('economy', {
 		num: {
 			type: Sequelize.INTEGER,
 			primaryKey: true,
 			autoIncrement: true
 		},
-		name: {
-			type: Sequelize.STRING
-		},
 		uid: {
 			type: Sequelize.BIGINT,
 			unique: true
 		},
-		point: {
+		money: {
 			type: Sequelize.BIGINT,
 			defaultValue: 0
 		},
-		block: {
-			type: Sequelize.BOOLEAN,
-			defaultValue: false
+		dailytime: {
+			type: Sequelize.BIGINT,
+			defaultValue: 0
 		},
-		afk: {
-			type: Sequelize.BOOLEAN,
-			defaultValue: false
+		worktime: {
+			type: Sequelize.BIGINT,
+			defaultValue: 0
 		},
-		reasonafk: {
-			type: Sequelize.STRING
+		stealtime: {
+			type: Sequelize.BIGINT,
+			defaultValue: 0
 		}
 		
 	});
-	return User;
+	return Economy;
 }

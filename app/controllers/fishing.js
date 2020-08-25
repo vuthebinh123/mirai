@@ -1,28 +1,28 @@
 const logger = require("../modules/log.js");
 module.exports = function({ models, api }) {
-	const User = models.use("user");
+	const Fishing = models.use("fishing");
 
 /* ==================== Last Time Fishing ==================== */
 
 	function lastTimeFishing(uid) {
-		return User.findOne({
+		return Fishing.findOne({
 			where: {
 				uid
 			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.get({ plain: true }).lastTimeFishing;
+		}).then(function(fishing) {
+			if (!fishing) return;
+			return fishing.get({ plain: true }).lastTimeFishing;
 		});
 	}
 
 	function updateLastTimeFishing(uid, lastTimeFishing) {
-		return User.findOne({
+		return Fishing.findOne({
 			where: {
 				uid
 			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.update({ lastTimeFishing });
+		}).then(function(fishing) {
+			if (!fishing) return;
+			return fishing.update({ lastTimeFishing });
 		}).then(function() {
 			return true;
 		}).catch(function(error) {
@@ -34,24 +34,24 @@ module.exports = function({ models, api }) {
 /* ==================== Inventory ==================== */
 
 	function getInventory(uid) {
-		return User.findOne({
+		return Fishing.findOne({
 			where: {
 				uid
 			}
-		}).then(function(user) {
-			if (!user) return;
-			return JSON.parse(user.get({ plain: true }).inventory);
+		}).then(function(fishing) {
+			if (!fishing) return;
+			return JSON.parse(fishing.get({ plain: true }).inventory);
 		});
 	}
 
 	function updateInventory(uid, inventory) {
-		return User.findOne({
+		return Fishing.findOne({
 			where: {
 				uid
 			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.update({ inventory: JSON.stringify(inventory) });
+		}).then(function(fishing) {
+			if (!fishing) return;
+			return fishing.update({ inventory: JSON.stringify(inventory) });
 		}).then(function() {
 			return true;
 		}).catch(function(error) {
@@ -63,24 +63,24 @@ module.exports = function({ models, api }) {
 /* ==================== Stats ==================== */
 
 	function getStats(uid) {
-		return User.findOne({
+		return Fishing.findOne({
 			where: {
 				uid
 			}
-		}).then(function(user) {
-			if (!user) return;
-			return JSON.parse(user.get({ plain: true }).stats);
+		}).then(function(fishing) {
+			if (!fishing) return;
+			return JSON.parse(fishing.get({ plain: true }).stats);
 		});
 	}
 
 	function updateStats(uid, stats) {
-		return User.findOne({
+		return Fishing.findOne({
 			where: {
 				uid
 			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.update({ stats: JSON.stringify(stats) });
+		}).then(function(fishing) {
+			if (!fishing) return;
+			return fishing.update({ stats: JSON.stringify(stats) });
 		}).then(function() {
 			return true;
 		}).catch(function(error) {

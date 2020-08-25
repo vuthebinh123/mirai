@@ -7,10 +7,16 @@ module.exports = function({ models, api }) {
 			if (nameUser) return;
 			api.getUserInfo(id, (err, result) => {
 				if (err) return logger(err, 2);
+				const Economy = models.use('economy');
+				const Fishing = models.use('fishing');
+				const Nsfw = models.use('nsfw');
 				var name = result[id].name;
 				var inventory = {"fish1": 0,"fish2": 0,"trash": 0,"crabs": 0,"crocodiles": 0,"whales": 0,"dolphins": 0,"blowfish": 0,"squid": 0,"sharks": 0};
 				var stats = {"casts": 0,"fish1": 0,"fish2": 0,"trash": 0,"crabs": 0,"crocodiles": 0,"whales": 0,"dolphins": 0,"blowfish": 0,"squid": 0,"sharks": 0};
-				User.findOrCreate({ where: { uid: id }, defaults: { name, inventory: JSON.stringify(inventory), stats: JSON.stringify(stats), reasonafk: "" } }).then(([user, created]) => {
+				Economy.findOrCreate({ where: {uid: id} });
+				Fishing.findOrCreate({ where: {uid: id}, defaults: { inventory: JSON.stringify(inventory), stats: JSON.stringify(stats) } });
+				Nsfw.findOrCreate({ where: {uid: id} });
+				User.findOrCreate({ where: { uid: id }, defaults: { name, reasonafk: "" } }).then(([user, created]) => {
 					if (created) logger(id, 'New User');
 				}).catch((error) => logger(error, 2))
 			})

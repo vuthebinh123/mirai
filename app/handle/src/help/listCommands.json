@@ -140,17 +140,17 @@
 		"group":"system"
 	},
 	{
-		"name":"yt -v",
+		"name":"video",
 		"decs":"Lấy video từ link youtube",
-		"usage":"yt -v [link hoặc từ khoá]",
-		"example":"youtube -v https://www.youtube.com/?watch=xxxyyyzzz",
+		"usage":"video [link hoặc từ khoá]",
+		"example":"video https://www.youtube.com/?watch=xxxyyyzzz",
 		"group":"media"
 	},
 	{
-		"name":"yt -m",
+		"name":"audio",
 		"decs":"Lấy âm thanh từ link hoặc url youtube",
-		"usage":"tt -m [link hoặc từ khoá]",
-		"example":"yt -m https://www.youtube.com/?watch=xxxyyyzzz",
+		"usage":"audio [link hoặc từ khoá]",
+		"example":"audio https://www.youtube.com/?watch=xxxyyyzzz",
 		"group":"media"
 	},
 	{
@@ -161,24 +161,17 @@
 		"group":"general"
 	},
 	{
-		"name":"nhentai -r",
-		"decs":"Lấy code may mắn cho riêng bạn ( ͡° ͜ʖ ͡°)",
-		"usage":"nhentai -r",
-		"example":"nhentai -r",
+		"name":"nhentai",
+		"decs":"Lấy thông tin chuyện của bạn ( ͡° ͜ʖ ͡°)",
+		"usage":"nhentai [id/để trống]",
+		"example":"nhentai 177013",
 		"group":"nsfw"
 	},
 	{
-		"name":"nhentai -i",
+		"name":"hentaivn",
 		"decs":"Lấy thông tin chuyện của bạn ( ͡° ͜ʖ ͡°)",
-		"usage":"nhentai -i [id]",
-		"example":"nhentai -i 177013",
-		"group":"nsfw"
-	},
-	{
-		"name":"hentaivn -i",
-		"decs":"Lấy thông tin chuyện của bạn ( ͡° ͜ʖ ͡°)",
-		"usage":"hentaivn -i [id]",
-		"example":"hentaivn -i 19945",
+		"usage":"hentaivn [id/để trống]",
+		"example":"hentaivn 19945",
 		"group":"nsfw"
 	},
 	{
@@ -452,28 +445,28 @@
 		"decs": "Câu cá thôi",
 		"usage": "fishing",
 		"example": "fishing",
-		"group": "Economy"
+		"group": "economy"
 	},
 	{
 		"name": "fishing túi",
 		"decs": "Xem túi của bạn đã có những loại cá nào và số lượng mỗi loại",
 		"usage": "fishing [túi,inv]",
 		"example": "fishing túi",
-		"group": "Economy"
+		"group": "economy"
 	},
 	{
 		"name": "fishing sell",
 		"decs": "bán cá và rác sau khi bạn câu được!",
 		"usage": "fishing sell [theo số thứ tự trong fishing list hoặc all]",
 		"example": "fishing sell all",
-		"group": "Economy"
+		"group": "economy"
 	},
 	{
 		"name": "fishing list",
 		"decs": "xem giá thành cũng như số thứ tự của từng loại cá!",
 		"usage": "fishing list",
 		"example": "fishing list",
-		"group": "Economy"
+		"group": "economy"
 	},
 	{
 		"name": "meow",
@@ -484,9 +477,23 @@
 	},
 	{
 		"name": "afk",
-		"decs": "bật mode afk để người bạn của bạn biêt!",
+		"decs": "bật mode afk để người bạn của bạn biết rằng bạn đang bận!",
 		"usage": "afk [lời nhắn]",
 		"example": "afk đi ngủ",
-		"group": "System"
+		"group": "system"
+	},
+	{
+		"name": "steal",
+		"decs": "trộm tiền của một trong số người trong group!",
+		"usage": "steal",
+		"example": "steal",
+		"group": "economy"
+	},
+	{
+		"name": "rname",
+		"decs": "thay đổi biệt danh của bạn theo tên ngẫu nhiên!",
+		"usage": "rname",
+		"example": "rname",
+		"group": "genaral"
 	}
 ]

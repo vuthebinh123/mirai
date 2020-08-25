@@ -37,8 +37,8 @@ async function backup() {
 	fs.mkdirSync('./tmp');
 	if (fs.existsSync('./app/handle')) fs.copySync('./app/handle', './tmp/handle');
 	if (fs.existsSync('./appstate.json')) fs.copySync('./appstate.json', './tmp/appstate.json');
-	if (fs.existsSync('./config/data.sqlite')) fs.copySync('./config/data.sqlite', './tmp/data.sqlite');
-	if (fs.existsSync('./config/index.js')) fs.copySync('./config/index.js', './tmp/config.js');
+	if (fs.existsSync('./config')) fs.copySync('./config', './tmp/config');
+	if (fs.existsSync('./database')) fs.copySync('./database', './tmp/databass');
 	if (fs.existsSync('./index.js')) fs.copySync('./index.js', './tmp/index.js');
 	if (fs.existsSync('./.env')) fs.copySync('./.env', './tmp/.env.old');
 }
@@ -62,6 +62,7 @@ async function install() {
 	console.log('-> Đang cài đặt bản cập nhật mới');
 	fs.copySync('./tmp/newVersion', './');
 	if (fs.existsSync('./tmp/appstate.json')) fs.copySync('./tmp/appstate.json', './appstate.json');
+	if (fs.existsSync('./tmp/.env.old')) fs.copySync('./tmp/.env.old', './.env');
 }
 
 function modules() {

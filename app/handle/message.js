@@ -1,6 +1,6 @@
-module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, Economy, Fishing }) {
+module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, Economy, Fishing, Nsfw }) {
 	/* ================ Config ==================== */
-	let {prefix, canCheckUpdate, googleSearch, wolfarm, yandex, openweather, tenor, saucenao, waketime, sleeptime, admins, ENDPOINT, nsfwGodMode} = config;
+	let {prefix, canCheckUpdate, googleSearch, wolfarm, yandex, openweather, tenor, saucenao, waketime, sleeptime, admins, nsfwGodMode} = config;
 	const fs = require("fs-extra");
 	const moment = require("moment-timezone");
 	const request = require("request");
@@ -264,7 +264,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//resend
-		if (contentMessage.indexOf(`${prefix}resend`) == 0 && admins.includes(senderID)) {
+		if (contentMessage.indexOf(`${prefix}resend`) == 0) {
 			var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
 			if (content == 'off') {
 				if (__GLOBAL.resendBlocked.includes(threadID)) return api.sendMessage("Nhóm này đã bị tắt resend từ trước!", threadID, messageID);
@@ -467,7 +467,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 	/* ==================== Media Commands ==================== */
 
 		//youtube music
-		if (contentMessage.indexOf(`${prefix}yt -m`) == 0)
+		if (contentMessage.indexOf(`${prefix}audio`) == 0)
 			return (async () => {
 				var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 6, contentMessage.length);
 				var ytdl = require("ytdl-core");
@@ -480,7 +480,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			})();
 
 		//youtube video
-		if (contentMessage.indexOf(`${prefix}yt -v`) == 0)
+		if (contentMessage.indexOf(`${prefix}video`) == 0)
 			return (async () => {
 				var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 6, contentMessage.length);
 				var ytdl = require("ytdl-core");
@@ -785,6 +785,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//credits
 		if (contentMessage == "credits") return api.sendMessage("Project Mirai được thực hiện bởi:\nSpermLord: https://fb.me/MyNameIsSpermLord\nCatalizCS: https://fb.me/Cataliz2k\nFull source code at: https://github.com/roxtigger2003/mirai", threadID, messageID);
 
+		//random name
+		if (contentMessage.indexOf(`${prefix}rname`) == 0) return request(`https://uzby.com/api.php?min=4&max=12`, (err, response, body) => api.changeNickname(`${body}`, threadID, senderID));
+
 		//simsimi
 		if (contentMessage.indexOf(`${prefix}sim`) == 0) return request(`https://simsumi.herokuapp.com/api?text=${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}&lang=vi`, (err, response, body) => api.sendMessage((JSON.parse(body).success != '') ? JSON.parse(body).success : 'Không có câu trả nời nào.', threadID, messageID));
 
@@ -1034,7 +1037,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return api.getThreadInfo(threadID, (err, info) => {
 				if (err) return api.sendMessage('Đã có lỗi xảy ra!.', threadID, messageID);
 				var ids = info.participantIDs;
-				ids.splice(ids.indexOf(botid), 1);
+				ids.splice(ids.indexOf(api.getCurrentUserID()), 1);
 				var body = '@everyone', mentions = [];
 				for (let i = 0; i < ids.length; i++) {
 					if (i == body.length) body += 'e';
@@ -1159,14 +1162,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 	/* ==================== NSFW Commands ==================== */
 
-		//nhentai ramdom code
-		if (contentMessage == `${prefix}nhentai -r`) return api.sendMessage((__GLOBAL.NSFWBlocked.includes(threadID)) ? 'Nhóm này đang bị tắt NSFW!' : `Code lý tưởng của nii-chan là: ${Math.floor(Math.random() * 99999)}`, threadID, messageID);
-
 		//nhentai search
-		if (contentMessage.indexOf(`${prefix}nhentai -i`) == 0) {
+		if (contentMessage.indexOf(`${prefix}nhentai`) == 0) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
-			let id = contentMessage.slice(prefix.length + 11, contentMessage.length).trim();
-			if (!id) return api.sendMessage("Nhập id!", threadID, messageID);
+			let id = contentMessage.slice(prefix.length + 8, contentMessage.length).trim();
+			if (!id) return api.sendMessage(`Code lý tưởng để bắn tung toé là: ${Math.floor(Math.random() * 99999)}`, threadID, messageID);
 			return request(`https://nhentai.net/api/gallery/${id}`, (error, response, body) => {
 				var codeData = JSON.parse(body);
 				if (codeData.error == true) return api.sendMessage("Không tìm thấy truyện này", threadID, messageID);
@@ -1192,11 +1192,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		//hentaivn
-		if (contentMessage.indexOf(`${prefix}hentaivn -i`) == 0) {
+		if (contentMessage.indexOf(`${prefix}hentaivn`) == 0) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
 			const cheerio = require('cheerio');
-			var id = contentMessage.slice(prefix.length + 12, contentMessage.length);
+			var id = contentMessage.slice(prefix.length + 9, contentMessage.length);
 			if (!id) return api.sendMessage("Nhập id!", threadID, messageID);
+			if (!id) return api.sendMessage(`Code lý tưởng để bắn tung toé là: ${Math.floor(Math.random() * 21553)}`, threadID, messageID);
 			axios.get(`https://hentaivn.net/id${id}`).then((response) => {
 				if (response.status == 200) {
 					const html = response.data;
@@ -1244,7 +1245,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//porn pics
 		if (contentMessage.indexOf(`${prefix}porn`) == 0) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
-			return Economy.pornUseLeft(senderID).then(useLeft => {
+			return Nsfw.pornUseLeft(senderID).then(useLeft => {
 				if (useLeft == 0) return api.sendMessage(`Bạn đã hết số lần dùng ${prefix}porn.\nHãy nâng cấp lên Hạng NSFW cao hơn hoặc chờ đến ngày mai.`, threadID, messageID);
 				const cheerio = require('cheerio');
 				const ffmpeg = require("fluent-ffmpeg");
@@ -1272,7 +1273,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					return api.sendMessage('=== Tất cả các tag Porn ===\n' + pornTags, threadID, messageID);
 				}
 				axios.get(`https://www.pornhub.com/album/${album[content]}`).then((response) => {
-					if (useLeft != -1) Economy.subtractPorn(senderID);
+					if (useLeft != -1) Nsfw.subtractPorn(senderID);
 					if (response.status == 200) {
 						const html = response.data;
 						const $ = cheerio.load(html);
@@ -1319,7 +1320,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//hentai
 		if (contentMessage.indexOf(`${prefix}hentai`) == 0) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
-			return Economy.hentaiUseLeft(senderID).then(useLeft => {
+			return Nsfw.hentaiUseLeft(senderID).then(useLeft => {
 				if (useLeft == 0) return api.sendMessage(`Bạn đã hết số lần dùng ${prefix}hentai.\nHãy nâng cấp lên Hạng NSFW cao hơn hoặc chờ đến ngày mai.`, threadID, messageID);
 				var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
 				var jsonData = fs.readFileSync(__dirname + "/src/anime.json");
@@ -1331,7 +1332,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					return api.sendMessage('=== Tất cả các tag Hentai ===\n' + nsfwTags, threadID, messageID);
 				}
 				request(data[content], (error, response, body) => {
-					if (useLeft != -1) Economy.subtractHentai(senderID);
+					if (useLeft != -1) Nsfw.subtractHentai(senderID);
 					let picData = JSON.parse(body);
 					let getURL = picData.data.response.url;
 					let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
@@ -1344,9 +1345,9 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage == `${prefix}mynsfw`) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
 			(async () => {
-				let tier = await Economy.getNSFW(senderID);
-				let hentai = await Economy.hentaiUseLeft(senderID);
-				let porn = await Economy.pornUseLeft(senderID);
+				let tier = await Nsfw.getNSFW(senderID);
+				let hentai = await Nsfw.hentaiUseLeft(senderID);
+				let porn = await Nsfw.pornUseLeft(senderID);
 				if (tier == -1) api.sendMessage('Bạn đang ở God Mode.\nBạn sẽ không bị giới hạn số lần dùng lệnh NSFW.', threadID, messageID);
 				else api.sendMessage(`Hạng NSFW của bạn là ${tier}.\nSố lần sử dụng ${prefix}porn còn lại: ${porn}.\nSố lần sử dụng ${prefix}hentai còn lại: ${hentai}.`, threadID, messageID);
 			})();
@@ -1357,10 +1358,10 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage == `${prefix}buynsfw`) {
 			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
 			(async () => {
-				let tier = await Economy.getNSFW(senderID);
+				let tier = await Nsfw.getNSFW(senderID);
 				if (tier == -1) api.sendMessage('Bạn đang ở God Mode nên sẽ không thể mua.', threadID, messageID);
 				else {
-					let buy = await Economy.buyNSFW(senderID);
+					let buy = await Nsfw.buyNSFW(senderID);
 					if (buy == false) api.sendMessage('Đã có lỗi xảy ra!', threadID, messageID);
 					else api.sendMessage(buy.toString(), threadID, messageID);
 				}
@@ -1375,7 +1376,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			var sender = content.slice(0, content.lastIndexOf(" "));
 			var tierSet = content.substring(content.lastIndexOf(" ") + 1);
-			return Economy.getMoney(senderID).then((moneydb) => {
+			return Nsfw.getMoney(senderID).then((moneydb) => {
 				if (isNaN(tierSet)) return api.sendMessage('Số hạng NSFW cần set của bạn không phải là 1 con số!', threadID, messageID);
 				if (tierSet > 5 || tierSet < -1) return api.sendMessage('Hạng NSFW không được dưới -1 và vượt quá 5', threadID, messageID);
 				if (tierSet == -1 && nsfwGodMode == false) return api.sendMessage('Bạn chưa bật NSFW God Mode trong config.', threadID, messageID);
@@ -1388,7 +1389,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							tag: event.mentions[mention].replace("@", ""),
 							id: mention
 						}]
-					}, threadID, () => Economy.setNSFW(mention, parseInt(tierSet)), messageID);
+					}, threadID, () => Nsfw.setNSFW(mention, parseInt(tierSet)), messageID);
 				if (senderID != 'me' && tierSet == -1)
 					api.sendMessage({
 						body: `Bạn đã bật God Mode cho ${event.mentions[mention].replace("@", "")}!\nGiờ người này có thể dùng lệnh NSFW mà không bị giới hạn!`,
@@ -1396,7 +1397,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 							tag: event.mentions[mention].replace("@", ""),
 							id: mention
 						}]
-					}, threadID, () => Economy.setNSFW(mention, parseInt(tierSet)), messageID);
+					}, threadID, () => Nsfw.setNSFW(mention, parseInt(tierSet)), messageID);
 			});
 		}
 
@@ -1572,6 +1573,57 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			}, threadID, () => Economy.setMoney(mention, parseInt(moneySet)), messageID);
 		}
 
+		// steal
+		if (contentMessage == `${prefix}steal` && senderID != api.getCurrentUserID()) {
+			let cooldown = 1800000;
+				Economy.getStealTime(senderID).then(function(lastSteal) {
+				if (lastSteal !== null && cooldown - (Date.now() - lastSteal) > 0) {
+					let time = ms(cooldown - (Date.now() - lastSteal));
+					api.sendMessage("Bạn vừa ăn trộm, để tránh bị lên phường vui lòng quay lại sau: " + time.minutes + " phút " + time.seconds + " giây ", threadID, messageID);
+				}
+				else {
+					api.getThreadInfo(threadID, function(err, info) {
+						if (err) throw err;
+						let victim = info.participantIDs[Math.floor(Math.random() * info.participantIDs.length)];
+						User.createUser(victim);
+						User.getName(victim).then(nameV => {
+							User.getName(senderID).then(name => {
+								if (victim == api.getCurrentUserID() && senderID == victim) return api.sendMessage("Cần lao vi tiên thủ\nNăng cán dĩ đắc thực\nVô vi thực đầu buồi\nThực cứt thế cho nhanh", threadID, messageID);
+								else if (senderID != victim && victim != api.getCurrentUserID()) {
+									var route = Math.floor(Math.random() * 5);
+									if (route > 1 || route == 0) {
+										Economy.getMoney(victim).then(moneydb => {
+											var money = Math.floor(Math.random() * 200) + 1;
+											if (moneydb <= 0 || moneydb == undefined) return api.sendMessage("Bạn đen vl, trộm được mỗi cục cứt xD", threadID, messageID);
+											else if (moneydb >= money) return api.sendMessage(`Bạn vừa trộm ${money} đô từ 1 thành viên trong nhóm`, threadID, () => {
+												Economy.subtractMoney(victim, money);
+												Economy.addMoney(senderID, parseInt(money));
+											}, messageID);
+											else if (moneydb < money) return api.sendMessage(`Bạn vừa trộm TẤT CẢ ${moneydb} đô của 1 thành viên trong nhóm`, threadID, () => {
+												Economy.subtractMoney(victim, parseInt(moneydb));
+												Economy.addMoney(senderID, parseInt(moneydb));
+											}, messageID);
+											else return api.sendMessage("Bạn đen vl, trộm được cục cứt xD", threadID, messageID);
+										})
+									} else if (route == 1) {
+										Economy.getMoney(senderID).then(moneydb => {
+											if (moneydb <= 0) return api.sendMessage("Cần lao vi tiên thủ\nNăng cán dĩ đắc thực\nVô vi thực đầu buồi\nThực cứt thế cho nhanh", threadID, messageID);
+											else if (moneydb > 0) return api.sendMessage(`Bạn bị tóm vì tội ăn trộm, mất ${moneydb} đô`, threadID, () => api.sendMessage({body: `Chúc mừng anh hùng ${nameV} tóm gọn tên trộm ${name} và đã nhận được tiền thưởng ${Math.floor(moneydb / 2)} đô`, mentions: [{ tag: nameV, id: victim}, {tag: name, id: senderID}]}, threadID, () => {
+												Economy.subtractMoney(senderID, moneydb);
+												Economy.addMoney(victim, parseInt(Math.floor(moneydb / 2)));
+											}), messageID);
+										})
+									}
+								}
+							})
+						})
+					})
+					Economy.updateStealTime(senderID, Date.now());
+				};
+			})
+			return;
+		}
+
 		//fishing
 		if (contentMessage.indexOf(`${prefix}fishing`) == 0)
 			return (async () => {
@@ -1745,6 +1797,8 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				}
 			})();
 		
+
+
 
 		//Check if command is correct
 		if (contentMessage.indexOf(prefix) == 0) {

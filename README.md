@@ -77,9 +77,11 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.5.3: thêm lệnh còn thiếu vào file cmds.json
 
-- 4.6.0: thay api anime thành v3(steal hộ bố mày cái thằng đbrr Hiếu ?), thêm afk command, meow, admin help và admin all ( đang làm!!)
+- 4.6.0: thay api anime thành v3, thêm afk command, meow, admin help và admin all ( đang làm!!)
 
 - 4.6.1: fix afk, source code không nhận lệnh, chuyển yandex thành google dịch
+
+- 4.6.2: thiết kế lại database(phân chia rõ ràng từng mục), thêm lệnh steal và rname, thay yt -m thành audio và yt -v thành video, đưa random code vào nhentai và hentaivn(check help để biết thêm chi tiết), tự động backup thêm folder database, tự động bung file .env cũ của phần update. Thiếu gì tính sau, mệt lắm rồi
 
 </details>
 
