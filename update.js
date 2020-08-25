@@ -38,7 +38,7 @@ async function backup() {
 	if (fs.existsSync('./app/handle')) fs.copySync('./app/handle', './tmp/handle');
 	if (fs.existsSync('./appstate.json')) fs.copySync('./appstate.json', './tmp/appstate.json');
 	if (fs.existsSync('./config')) fs.copySync('./config', './tmp/config');
-	if (fs.existsSync('./database')) fs.copySync('./database', './tmp/databass');
+	if (fs.existsSync('./database')) fs.copySync('./database', './tmp/database');
 	if (fs.existsSync('./index.js')) fs.copySync('./index.js', './tmp/index.js');
 	if (fs.existsSync('./.env')) fs.copySync('./.env', './tmp/.env.old');
 }
