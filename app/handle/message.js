@@ -356,7 +356,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						'- Tên lệnh: ' + helpList.find(item => item.name == helpCommand).name + '\n' +
 						'- Thông tin: ' + helpList.find(item => item.name == helpCommand).decs + '\n' +
 						'- Cách dùng: ' + prefix + helpList.find(item => item.name == helpCommand).usage + '\n' +
-						'- Hướng dẫn: ' + prefix + helpList.find(item => item.name == helpCommnand).example,
+						'- Hướng dẫn: ' + prefix + helpList.find(item => item.name == helpCommand).example,
 						threadID, messageID
 					);
 				else return api.sendMessage(`Lệnh bạn nhập không hợp lệ, hãy gõ ${prefix}help để xem tất cả các lệnh có trong bot.`, threadID, messageID);
@@ -948,28 +948,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return;
 		}
 
-		//Global Ranking
-		if (contentMessage == `${prefix}gRank`)
-			(async () => {
-				let msg = {
-					body: 'Top 50 người có level cao nhất:',
-					mentions: []
-				}
-				let num = 0;
-				let all = await User.getColumn(['name', 'uid', 'point']);
-				all.sort((a, b) => b.point - a.point);
-				for (var i = 0; i < 50; i++) {
-					let level = Rank.expToLevel(all[i].point);
-					num += 1;
-					msg.body += '\n' + num + '. ' + all[i].name + ' - Level ' + level;
-					msg.mentions.push({
-						tag: all[i].name,
-						id: all[i].uid
-					});
-				}
-				api.sendMessage(msg, threadID, messageID);
-			})();
-
 		//dịch ngôn ngữ
 		if (contentMessage.indexOf(`${prefix}trans`) == 0) {
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
@@ -1376,7 +1354,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			var sender = content.slice(0, content.lastIndexOf(" "));
 			var tierSet = content.substring(content.lastIndexOf(" ") + 1);
-			return Nsfw.getMoney(senderID).then((moneydb) => {
+			return Economy.getMoney(senderID).then((moneydb) => {
 				if (isNaN(tierSet)) return api.sendMessage('Số hạng NSFW cần set của bạn không phải là 1 con số!', threadID, messageID);
 				if (tierSet > 5 || tierSet < -1) return api.sendMessage('Hạng NSFW không được dưới -1 và vượt quá 5', threadID, messageID);
 				if (tierSet == -1 && nsfwGodMode == false) return api.sendMessage('Bạn chưa bật NSFW God Mode trong config.', threadID, messageID);
@@ -1694,7 +1672,6 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						await Economy.subtractMoney(senderID, 2);
 					}
 					else if (new Date() - new Date(lastTimeFishing) <= 5000) api.sendMessage('Bạn chỉ được câu cá mỗi 5 giây một lần, vui lòng không spam .-.', threadID, messageID);
-					else if (moneydb < 2) api.sendMessage('Bạn không đủ 2 đô để câu cá, hãy làm rồi mới có ăn nha! Số tiền hiện bạn đang có là: ' + moneydb + ' đô', threadID, messageID);
 				}
 				else if (content.indexOf('túi') == 0) {
 					var total = inventory.trash + inventory.fish1 * 30 + inventory.fish2 * 100 + inventory.crabs * 250 + inventory.blowfish * 300 + inventory.crocodiles * 500 + inventory.whales * 750 + inventory.dolphins * 750 + inventory.squid * 1000 + inventory.sharks * 1000;
@@ -1715,7 +1692,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						threadID, messageID
 					);
 				}
-				else if (content.indexOf('sell') == 0) {
+				else if (content.indexOf('bán') == 0) {
 					var choose = content.split(' ')[1];
 					if (!choose) return api.sendMessage('Chưa nhập thứ cần bán.', threadID, messageID);
 					else if (choose == 'trash' || choose == '1') {
@@ -1794,11 +1771,24 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					}
 					await Fishing.updateInventory(senderID, inventory);
 					await Economy.addMoney(senderID, money);
-				}
+				} else if (content.indexOf("list") == 0) return api.sendMessage(
+						"===== Danh sách tiền của mọi loại cá =====" +
+						"\n1/ Rác | 🗑️: 1 đô" +
+						"\n2/ Cá cỡ bình thường | 🐟: 30 đô" +
+						"\n3/ Cá hiếm | 🐠: 100 đô" +
+						"\n4/ Cua | 🦀: 250 đô" +
+						"\n5/ Cá nóc | 🐡: 300 đô" +
+						"\n6/ Cá sấu | 🐊: 500 đô" +
+						"\n7/ Cá voi | 🐋: 750 đô" +
+						"\n8/ Cá heo | 🐬: 750 đô" +
+						"\n9/ Mực | 🦑: 1000 đô" +
+						"\n10/ Cá mập | 🦈: 1000 đô",
+						threadID, messageID
+					);
 			})();
 		
 
-
+		/* ==================== System Check ==================== */
 
 		//Check if command is correct
 		if (contentMessage.indexOf(prefix) == 0) {

@@ -64,6 +64,21 @@ module.exports = function({ models, api }) {
 		return { level, expCurrent, expNextLevel };
 	}
 
+	function getGlobalRank() {
+		return User.findAll({ order: [['point', 'DESC']], attributes: ['num','uid','point']
+		}).then(function(data) {
+			if (!data) return;
+			var value = [];
+			data.forEach(item => value.push(item))
+			return value;
+		}).then(function() {
+			return true;
+		}).catch(function(error) {
+			logger(error, 2);
+			return false;
+		})
+	}
+
 	return {
 		getPoint,
 		updatePoint,

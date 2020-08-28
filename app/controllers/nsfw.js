@@ -1,6 +1,7 @@
 const logger = require("../modules/log.js");
 module.exports = function({ models, api }) {
 	const Nsfw = models.use("nsfw");
+	const Economy = models.use("economy");
 
 	/* ==================== NSFW ==================== */
 	
@@ -46,14 +47,14 @@ module.exports = function({ models, api }) {
 		}).then(async function(nsfw) {
 			if (!nsfw) return;
 			let myTier = await getNSFW(uid);
-			var money = await getMoney(uid);
+			var money = await Economy.getMoney(uid);
 			if (myTier == 5) return 'Không thể mua thêm vì bạn đã ở Hạng 5';
 			const price = [2000, 6000, 10000, 14000, 20000];
 			const tier = [1, 2, 3, 4, 5];
 			var needPrice = price[tier.indexOf(myTier + 1)];
 			if (money < needPrice) return 'Làm chưa mà đòi ăn? Vẫn còn thiếu ' + (needPrice - money) + ' đô kìa.';
 			else {
-				var getReturn = await subtractMoney(uid, needPrice);
+				var getReturn = await Economy.subtractMoney(uid, needPrice);
 				if (getReturn == true) {
 					setNSFW(uid, myTier + 1);
 					return 'Đã làm thì phải có ăn! Mua thành công Hạng ' + (myTier + 1) + '!';

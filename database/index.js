@@ -12,6 +12,13 @@ module.exports = {
 			acquire: 30000,
 			idle: 10000
 		},
+		retry: {
+			match: [
+				/SQLITE_BUSY/,
+			],
+			name: 'query',
+			max: 5
+		},
 		logging: process.env.NODE_ENV == 'development' ? console.log : false,
 		transactionType: 'IMMEDIATE',
 		define: {

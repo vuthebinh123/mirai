@@ -105,13 +105,6 @@
 		"group":"system"
 	},
 	{
-		"name":"gRank",
-		"decs":"Lấy top 50 người có level cao nhất.",
-		"usage":"gRank",
-		"example":"gRank",
-		"group":"system"
-	},
-	{
 		"name":"anime",
 		"decs":"Lấy ảnh anime SFW",
 		"usage":"anime [tag]",
@@ -455,7 +448,7 @@
 		"group": "economy"
 	},
 	{
-		"name": "fishing sell",
+		"name": "fishing bán",
 		"decs": "bán cá và rác sau khi bạn câu được!",
 		"usage": "fishing sell [theo số thứ tự trong fishing list hoặc all]",
 		"example": "fishing sell all",
