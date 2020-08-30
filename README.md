@@ -81,9 +81,11 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.6.1: fix afk, source code không nhận lệnh, chuyển yandex thành google dịch
 
-- 4.6.2: thiết kế lại database(phân chia rõ ràng từng mục), thêm lệnh steal và rname, thay yt -m thành audio và yt -v thành video, đưa random code vào nhentai và hentaivn(check help để biết thêm chi tiết), tự động backup thêm folder database, tự động bung file .env cũ của phần update. Thiếu gì tính sau, mệt lắm rồi
+- 4.6.2: thiết kế lại database(phân chia rõ ràng từng mục), thêm lệnh steal và rname, thay yt -m thành audio và yt -v thành video, đưa random code vào nhentai và hentaivn(check help để biết thêm chi tiết), tự động backup thêm folder database, tự động bung file .env cũ của phần update.
 
 - 4.6.3: loại bỏ lệnh grank, fix lỗi "database is locked", thêm fishing list, sửa một số lỗi không mong muốn!
+
+- 4.6.4: Sửa buynsfw. (Lưu ý: những bản cập nhật sửa lỗi x.y.z -> chỉ sửa mỗi z thì sẽ không cần phải bỏ database cũ, bạn chỉ cần chuyển file database cũ trong tmp/config/data.sqlite vào config/ là được).
 
 </details>
 

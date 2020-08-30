@@ -1,12 +1,12 @@
 const modules = require("./modules");
 const config = require("../config");
 module.exports = function({ api, models, __GLOBAL }) {
-	const User = require("./controllers/user")({ models, api });
-		  Thread = require("./controllers/thread")({ models, api });
-		  Rank = require("./controllers/rank")({ models, api }),
-		  Economy = require("./controllers/economy")({ models, api }),
-		  Fishing = require("./controllers/fishing")({ models, api }),
-		  Nsfw = require("./controllers/nsfw")({ models, api });
+	const User = require("./controllers/user")({ models, api }),
+				Thread = require("./controllers/thread")({ models, api }),
+				Rank = require("./controllers/rank")({ models, api }),
+				Economy = require("./controllers/economy")({ models, api }),
+				Fishing = require("./controllers/fishing")({ models, api }),
+				Nsfw = require("./controllers/nsfw")({ models, api, Economy });
 
 	(async () => {
 		modules.log("Đang khởi tạo biến môi trường...");

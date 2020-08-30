@@ -1,7 +1,6 @@
 const logger = require("../modules/log.js");
-module.exports = function({ models, api }) {
+module.exports = function({ models, api, Economy }) {
 	const Nsfw = models.use("nsfw");
-	const Economy = models.use("economy");
 
 	/* ==================== NSFW ==================== */
 	

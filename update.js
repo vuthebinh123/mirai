@@ -90,7 +90,6 @@ function modules() {
 async function finish() {
 	console.log('-> Đang hoàn tất');
 	fs.removeSync('./tmp/newVersion');
-	fs.moveSync('.env.example', '.env');
 	console.log('>> Cập nhật hoàn tất! Tất cả những dữ liệu quan trọng đã được sao lưu trong thư mục "tmp" <<');
 	if (!isGlitch) console.log('[!] Vì bạn đang không chạy bot trên Glitch, bạn sẽ cần phải tự khởi động bot [!]');
 	else cmd.run('refresh');
