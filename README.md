@@ -85,7 +85,11 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.6.3: loại bỏ lệnh grank, fix lỗi "database is locked", thêm fishing list, sửa một số lỗi không mong muốn!
 
-- 4.6.4: Sửa buynsfw. (Lưu ý: những bản cập nhật sửa lỗi x.y.z -> chỉ sửa mỗi z thì sẽ không cần phải bỏ database cũ, bạn chỉ cần chuyển file database cũ trong tmp/config/data.sqlite vào config/ là được).
+- 4.6.4: Sửa buynsfw.
+
+- 4.6.5: genaral -> general.
+
+(Lưu ý: những bản cập nhật sửa lỗi x.y.z -> chỉ sửa mỗi z thì sẽ không cần phải bỏ database cũ, bạn chỉ cần chuyển file database cũ trong tmp/config/data.sqlite vào config/ là được).
 
 </details>
 
