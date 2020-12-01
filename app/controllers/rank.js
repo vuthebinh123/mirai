@@ -1,50 +1,33 @@
 const logger = require("../modules/log.js");
-module.exports = function({ models, api }) {
-	const User = models.use("user");
+module.exports = function ({ models }) {
+	const Rank = models.use("user");
 	const FACTOR = 3;
 
-	function getPoint(uid) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.get({ plain: true }).point;
-		}).then(e => getInfo(e));
+	async function getPoint(uid) {
+		return (await Rank.findOne({ where: { uid } })).get({ plain: true }).point;
 	}
 
-	function updatePoint(uid, pointIncrement) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			const pointData = user.get({ plain: true }).point;
-			return user.update({ point: pointData + pointIncrement });
-		}).then(function() {
+	async function updatePoint(uid, pointIncrement) {
+		try {
+			let point = (await getPoint(uid)) + pointIncrement;
+			(await Rank.findOne({ where: { uid } })).update({ point });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
-	function setPoint(uid, point) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.update({ point });
-		}).then(function() {
+	async function setPoint(uid, point) {
+		try {
+			(await Rank.findOne({ where: { uid } })).update({ point });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
 	function expToLevel(point) {
@@ -57,32 +40,18 @@ module.exports = function({ models, api }) {
 		return FACTOR * level * (level - 1);
 	}
 
-	function getInfo(point) {
+	async function getInfo(uid) {
+		const point = await getPoint(uid);
 		const level = expToLevel(point);
 		const expCurrent = point - levelToExp(level);
 		const expNextLevel = levelToExp(level + 1) - levelToExp(level);
 		return { level, expCurrent, expNextLevel };
 	}
 
-	function getGlobalRank() {
-		return User.findAll({ order: [['point', 'DESC']], attributes: ['num','uid','point']
-		}).then(function(data) {
-			if (!data) return;
-			var value = [];
-			data.forEach(item => value.push(item))
-			return value;
-		}).then(function() {
-			return true;
-		}).catch(function(error) {
-			logger(error, 2);
-			return false;
-		})
-	}
-
 	return {
 		getPoint,
 		updatePoint,
 		setPoint,
-		expToLevel
+		getInfo
 	};
 };

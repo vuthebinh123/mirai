@@ -1,11 +1,11 @@
-module.exports = function({ error }) {
-	if(!error.error) return error.toString();
+module.exports = function (error, getText) {
+	if (!error.error) return error.toString();
 	switch (error.error) {
 		case "login-approval":
-			return "Vui lòng đăng nhập vào tài khoản và mở checkpoint!"
+			return getText('err2FA');
 		case "Wrong username/password.":
-			return "Sai tài khoản hoặc mật khẩu!"
+			return getText('wrongAorP');
 		default:
-			return "Có lỗi xảy ra khi đăng nhập!"
+			return getText('cantLogin');
 	}
 }

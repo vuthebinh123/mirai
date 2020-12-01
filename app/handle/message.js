@@ -1,134 +1,103 @@
-module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, Economy, Fishing, Nsfw }) {
+module.exports = function ({ api, config, __GLOBAL, User, Thread, Rank, Economy, Fishing, Nsfw, Image }) {
 	/* ================ Config ==================== */
-	let {prefix, canCheckUpdate, googleSearch, wolfarm, yandex, openweather, tenor, saucenao, waketime, sleeptime, admins, nsfwGodMode} = config;
+	let { prefix, googleSearch, wolfarm, openweather, tenor, saucenao, admins, nsfwGodMode } = config;
 	const fs = require("fs-extra");
 	const moment = require("moment-timezone");
 	const request = require("request");
 	const ms = require("parse-ms");
 	const stringSimilarity = require('string-similarity');
 	const axios = require('axios');
+	const logger = require("../modules/log.js");
 	var resetNSFW = false;
 
-	/* ================ Check update ================ */
-	if (canCheckUpdate) {
-		const semver = require('semver');
-		axios.get('https://raw.githubusercontent.com/roxtigger2003/mirai/master/package.json').then((res) => {
-			modules.log("Đang kiểm tra cập nhật...", 1);
-			var local = JSON.parse(fs.readFileSync('./package.json')).version;
-			if (semver.lt(local, res.data.version)) {
-				modules.log('Đã có bản cập nhật mới! Hãy bật terminal/cmd và gõ "node update" để cập nhật!', 1);
-				fs.writeFileSync('./.needUpdate', '');
-			}
-			else {
-				if (fs.existsSync('./.needUpdate')) fs.removeSync('./.needUpdate');
-				modules.log('Bạn đang sử dụng bản mới nhất!', 1);
-			}
-		}).catch(err => console.error(err));
+	function getText(...args) {
+		const langText = { ...__GLOBAL.language.message, ...__GLOBAL.language.fishing, ...__GLOBAL.language.thread, ...__GLOBAL.language.user };
+		const getKey = args[0];
+		if (!langText.hasOwnProperty(getKey)) throw `${__filename} - Not found key language: ${getKey}`;
+		let text = langText[getKey];
+		for (let i = args.length; i > 0; i--) {
+			let regEx = RegExp(`%${i}`, 'g');
+			text = text.replace(regEx, args[i]);
+		}
+		return text;
 	}
 
-	/* ================ CronJob ==================== */
-	if (!fs.existsSync(__dirname + "/src/groupID.json")) {
-		var data = [];
-		api.getThreadList(100, null, ["INBOX"], function(err, list) {
-			if (err) throw err;
-			list.forEach(item => (item.isGroup == true) ? data.push(item.threadID) : '');
-			fs.writeFile(__dirname + "/src/groupID.json", JSON.stringify(data), err => {
-				if (err) throw err;
-				modules.log("Tạo file groupID mới thành công!");
-			});
-		});
-	}
-	else {
-		fs.readFile(__dirname + "/src/groupID.json", "utf-8", (err, data) => {
-			if (err) throw err;
-			var groupids = JSON.parse(data);
-			if (!fs.existsSync(__dirname + "/src/listThread.json")) fs.writeFile(__dirname + "/src/listThread.json", JSON.stringify({ wake: [], sleep: [] }), err => modules.log("Tạo file listThread mới thành công!"));
-			setInterval(() => {
-				var oldData = JSON.parse(fs.readFileSync(__dirname + "/src/listThread.json"));
-				var timer = moment.tz("Asia/Ho_Chi_Minh").format("HH:mm");
-				groupids.forEach(item => {
-					while (timer == sleeptime && !oldData.sleep.includes(item)) {
-						api.sendMessage(`Tới giờ ngủ rồi đấy nii-chan, おやすみなさい!`, item);
-						oldData.sleep.push(item);
-						break;
-					}
-					while (timer == waketime && !oldData.wake.includes(item)) {
-						api.sendMessage(`おはようございます các nii-chan uwu`, item);
-						oldData.wake.push(item);
-						break;
-					}
-					fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify(oldData));
-				});
-				if (timer == "23:05" || timer == "07:05") fs.writeFileSync(__dirname + "/src/listThread.json", JSON.stringify({ wake: [], sleep: [] }));
-				if (timer == "00:00")
-					if (resetNSFW == false) {
-						resetNSFW = true;
-						Economy.resetNSFW();
-					}
-			}, 1000);
-		});
-	}
+	setInterval(() => {
+		var timer = moment.tz("Asia/Ho_Chi_Minh").format("HH:mm");
+		if (timer == "00:00") {
+			if (resetNSFW == false) {
+				resetNSFW = true;
+				Nsfw.resetNSFW();
+			}
+		}
+	}, 1000);
 
 	if (!fs.existsSync(__dirname + "/src/shortcut.json")) {
 		var template = [];
 		fs.writeFileSync(__dirname + "/src/shortcut.json", JSON.stringify(template));
-		modules.log('Tạo file shortcut mới thành công!');
+		logger('Tạo file shortcut mới thành công!');
 	}
 
-	return function({ event }) {
+	return async function ({ event }) {
 		let { body: contentMessage, senderID, threadID, messageID } = event;
 		senderID = parseInt(senderID);
 		threadID = parseInt(threadID);
 
-		if (__GLOBAL.userBlocked.includes(senderID)) return;
-		User.createUser(senderID);
-		Thread.createThread(threadID);
+		if (__GLOBAL.userBlocked.includes(senderID) && !admins.includes(senderID) || __GLOBAL.threadBlocked.includes(threadID) && !admins.includes(senderID)) return;
 
 		__GLOBAL.messages.push({
 			msgID: messageID,
 			msgBody: contentMessage
 		});
 
+		await User.createUser(senderID);
+		await Thread.createThread(threadID);
+		await Rank.updatePoint(senderID, 1);
+
 		if (event.mentions) {
 			var mentions = Object.keys(event.mentions);
-			mentions.forEach(mention => {
+			mentions.forEach(async mention => {
 				if (__GLOBAL.afkUser.includes(parseInt(mention))) {
-					(async () => {
-						var reason = await User.getReason(Object.keys(event.mentions));
-						var name = await User.getName(Object.keys(event.mentions));
-						reason == "none" ? api.sendMessage(`${name} Hiện tại đang bận!`, threadID, messageID) : api.sendMessage(`${name} Hiện tại đang bận với lý do: ${reason}`, threadID, messageID);
-					})();
+					var reason = await User.getReason(mention);
+					var name = await User.getName(mention);
+					reason == "none" ? api.sendMessage(getText('busy', name), threadID, messageID) : api.sendMessage(getText('busyWithReason', name, reason), threadID, messageID);
 					return;
 				}
 			});
 		}
 
 		if (__GLOBAL.afkUser.includes(parseInt(senderID))) {
-			(async () => {
-				await User.nonafk(senderID);
-				await User.updateReason(senderID, "");
-				__GLOBAL.afkUser.splice(__GLOBAL.afkUser.indexOf(senderID), 1);
-				var name = await User.getName(senderID);
-				return api.sendMessage(`Chào mừng bạn đã quay trở lại, ${name}`,threadID);
-			})();
+			await User.nonafk(senderID);
+			await User.updateReason(senderID, "");
+			__GLOBAL.afkUser.splice(__GLOBAL.afkUser.indexOf(senderID), 1);
+			var name = await User.getName(senderID);
+			return api.sendMessage(getText('welcomeBack', name), threadID);
 		}
 
-		if (!contentMessage) return;
-
-	/* ================ Staff Commands ==================== */
+		/* ================ Staff Commands ==================== */
 		//lấy shortcut
 		if (contentMessage.length !== -1) {
 			let shortcut = JSON.parse(fs.readFileSync(__dirname + "/src/shortcut.json"));
 			if (shortcut.some(item => item.id == threadID)) {
 				let getThread = shortcut.find(item => item.id == threadID).shorts;
-				if (getThread.some(item => item.in == contentMessage)) return api.sendMessage(getThread.find(item => item.in == contentMessage).out, threadID);
+				if (getThread.some(item => item.in == contentMessage)) {
+					let shortOut = getThread.find(item => item.in == contentMessage).out;
+					if (shortOut.indexOf(" | ") !== -1) {
+						var arrayOut = shortOut.split(" | ");
+						return api.sendMessage(`${arrayOut[Math.floor(Math.random() * arrayOut.length)]}`, threadID);
+					}
+					else return api.sendMessage(`${shortOut}`, threadID);
+				}
 			}
 		}
 
-		//lấy file cmds
+		//sim on/off
+		if (__GLOBAL.simOn.includes(threadID) && senderID != api.getCurrentUserID()) request(`http://195.201.173.201:26880/sim/${encodeURIComponent(contentMessage)}`, (err, response, body) => api.sendMessage((JSON.parse(body).out != '') ? JSON.parse(body).out : getText('noAnswer'), threadID, messageID));
+
+		//Get cmds.json
 		var nocmdData = JSON.parse(fs.readFileSync(__dirname + "/src/cmds.json"));
 
-		//tạo 1 đối tượng mới nếu group chưa có trong file cmds
+		//create new object contains banned cmds+threads
 		if (!nocmdData.banned.some(item => item.id == threadID)) {
 			let addThread = {
 				id: threadID,
@@ -138,234 +107,267 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			fs.writeFileSync(__dirname + "/src/cmds.json", JSON.stringify(nocmdData));
 		}
 
-		//lấy lệnh bị cấm trong group
+		//get banned cmds
 		var cmds = nocmdData.banned.find(item => item.id == threadID).cmds;
-		for (const item of cmds) if (contentMessage.indexOf(prefix + item) == 0) return api.sendMessage("Lệnh này đã bị cấm!", threadID, messageID);
+		for (const item of cmds) if (contentMessage.indexOf(prefix + item) == 0) return api.sendMessage(getText('bannedCommand'), threadID, messageID);
 
-		//unban command
-		if (contentMessage.indexOf(`${prefix}unban command`) == 0 && admins.includes(senderID)) {
-			var content = contentMessage.slice(prefix.length + 14,contentMessage.length);
-			if (!content) return api.sendMessage("Hãy nhập lệnh cần bỏ cấm!", threadID, messageID);
-			var jsonData = JSON.parse(fs.readFileSync(__dirname + "/src/cmds.json"));
-			var getCMDS = jsonData.banned.find(item => item.id == threadID).cmds;
-			if (!getCMDS.includes(content)) return api.sendMessage("Lệnh " + content + " chưa bị cấm", threadID, messageID);
-			else {
-				let getIndex = getCMDS.indexOf(content);
-				getCMDS.splice(getIndex, 1);
-				api.sendMessage("Đã bỏ cấm " + content + " trong group này", threadID, messageID);
-			}
-			return fs.writeFileSync(__dirname + "/src/cmds.json", JSON.stringify(jsonData), "utf-8");
-		}
-
-		//ban command
-		if (contentMessage.indexOf(`${prefix}ban command`) == 0 && admins.includes(senderID)) {
-			var content = contentMessage.slice(prefix.length + 12, contentMessage.length);
-			if (!content) return api.sendMessage("Hãy nhập lệnh cần cấm!", threadID, messageID);
-			var jsonData = JSON.parse(fs.readFileSync(__dirname + "/src/cmds.json"));
-			if (content == "list") {
-				return api.sendMessage(`Đây là danh sách các command hiện đang bị ban tại group này: ${nocmdData.banned.find(item => item.id == threadID).cmds}`, threadID, messageID);
-			}
-			if (!jsonData.cmds.includes(content)) return api.sendMessage("Không có lệnh " + content + " trong cmds.json nên không thể cấm", threadID, messageID);
-			else {
-				if (jsonData.banned.some(item => item.id == threadID)) {
-					let getThread = jsonData.banned.find(item => item.id == threadID);
-					getThread.cmds.push(content);
-				}
-				else {
-					let addThread = {
-						id: threadID,
-						cmds: []
-					};
-					addThread.cmds.push(content);
-					jsonData.banned.push(addThread);
-				}
-				api.sendMessage("Đã cấm " + content + " trong group này", threadID, messageID);
-			}
-			return fs.writeFileSync(__dirname + "/src/cmds.json", JSON.stringify(jsonData), "utf-8");
-		}
-
-		// Unban thread
-		if (__GLOBAL.threadBlocked.includes(threadID)) {
-			if (contentMessage == `${prefix}unban thread` && admins.includes(senderID)) {
-				const indexOfThread = __GLOBAL.threadBlocked.indexOf(threadID);
-				if (indexOfThread == -1) return api.sendMessage("Nhóm này chưa bị chặn!", threadID, messageID);
-				Thread.unban(threadID).then(success => {
-					if (!success) return api.sendMessage("Không thể bỏ chặn nhóm này!", threadID, messageID);
-					api.sendMessage("Nhóm này đã được bỏ chặn!", threadID, messageID);
-					__GLOBAL.threadBlocked.splice(indexOfThread, 1);
-					modules.log(threadID, "Unban Thread");
-				});
-			}
-			return;
-		}
-
-		Rank.updatePoint(senderID, 1);
-
-		// Unban user
-		if (contentMessage.indexOf(`${prefix}unban`) == 0 && admins.includes(senderID)) {
-			const mentions = Object.keys(event.mentions);
-			if (!mentions) return api.sendMessage("Vui lòng tag những người cần unban", threadID, messageID);
-			mentions.forEach(mention => {
-				const indexOfUser = __GLOBAL.userBlocked.indexOf(parseInt(mention));
-				if (indexOfUser == -1)
-					return api.sendMessage({
-						body: `${event.mentions[mention]} chưa bị ban, vui lòng ban trước!`,
-						mentions: [{
-							tag: event.mentions[mention],
-							id: mention
-						}]
-					}, threadID, messageID);
-				User.unban(mention).then(success => {
-					if (!success) return api.sendMessage("Không thể unban người này!", threadID, messageID);
-					api.sendMessage({
-						body: `Đã unban ${event.mentions[mention]}!`,
-						mentions: [{
-							tag: event.mentions[mention],
-							id: mention
-						}]
-					}, threadID, messageID);
-					__GLOBAL.userBlocked.splice(indexOfUser, 1);
-					modules.log(mentions, "Unban User");
-				});
-			});
-			return;
-		}
-
-		// Ban thread
-		if (contentMessage == `${prefix}ban thread` && admins.includes(senderID)) {
-			Thread.ban(parseInt(threadID)).then((success) => {
-				if (!success) return api.sendMessage("Không thể ban group này!", threadID, messageID);
-				api.sendMessage("Nhóm này đã bị chặn tin nhắn!.", threadID, messageID);
-				__GLOBAL.threadBlocked.push(parseInt(threadID));
-			})
-			return;
-		}
-
-		// Ban user
-		if (contentMessage.indexOf(`${prefix}ban`) == 0 && admins.includes(senderID)) {
-			const mentions = Object.keys(event.mentions);
-			if (!mentions) return api.sendMessage("Vui lòng tag những người cần ban!", threadID, messageID);
-			mentions.forEach(mention => {
-				if (__GLOBAL.threadBlocked.includes(mention)) return api.sendMessage(`${event.mentions[mention]} đã bị ban từ trước!`, threadID, messageID);
-				User.ban(parseInt(mention)).then((success) => {
-					if (!success) return api.sendMessage("Không thể ban người này!", threadID, messageID);
-					api.sendMessage({
-						body: `${event.mentions[mention]} đã bị ban!`,
-						mentions: [{
-							tag: event.mentions[mention],
-							id: parseInt(mention)
-						}]
-					}, threadID, messageID);
-					__GLOBAL.userBlocked.push(parseInt(mention));
-					modules.log(parseInt(mention), 'Ban User');
-				})
-			});
-			return;
-		}
-
-		//resend
-		if (contentMessage.indexOf(`${prefix}resend`) == 0) {
-			var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
-			if (content == 'off') {
-				if (__GLOBAL.resendBlocked.includes(threadID)) return api.sendMessage("Nhóm này đã bị tắt resend từ trước!", threadID, messageID);
-				Thread.blockResend(threadID).then((success) => {
-					if (!success) return api.sendMessage("Oops, không thể tắt resend ở nhóm này!", threadID, messageID);
-					api.sendMessage("Đã tắt resend tin nhắn thành công!", threadID, messageID);
-					__GLOBAL.resendBlocked.push(threadID);
-				})
-			}
-			else if (content == 'on') {
-				if (!__GLOBAL.resendBlocked.includes(threadID)) return api.sendMessage("Nhóm này chưa bị tắt resend", threadID, messageID);
-				Thread.unblockResend(threadID).then(success => {
-					if (!success) return api.sendMessage("Oops, không thể bật resend ở nhóm này!", threadID, messageID);
-					api.sendMessage("Đã bật resend tin nhắn, tôi sẽ nhắc lại tin nhắn bạn đã xoá 😈", threadID, messageID);
-					__GLOBAL.resendBlocked.splice(__GLOBAL.resendBlocked.indexOf(threadID), 1);
-				});
-			}
-			return;
-		}
-
-		//Thông báo tới toàn bộ group!
-		if (contentMessage.indexOf(`${prefix}noti`) == 0 && admins.includes(senderID)) {
-			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
-			if (!content) return api.sendMessage("Nhập thông tin vào!", threadID, messageID);
-			return api.getThreadList(100, null, ["INBOX"], (err, list) => {
-				if (err) throw err;
-				list.forEach(item => (item.isGroup == true && item.threadID != threadID) ? api.sendMessage(content, item.threadID) : '');
-				api.sendMessage('Đã gửi thông báo với nội dung:\n' + content, threadID, messageID);
-			});
-		}
-
-		//giúp thành viên thông báo lỗi về admin
+		//report
 		if (contentMessage.indexOf(`${prefix}report`) == 0) {
 			var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
-			if (!content) return api.sendMessage("Có vẻ như bạn chưa nhập thông tin, vui lòng nhập thông tin lỗi mà bạn gặp!", threadID, messageID);
-			(async () => {
-				var userName = await User.getName(senderID);
-				var threadName = await Thread.getName(threadID);
-				api.sendMessage(
-					"Báo cáo từ: " + userName +
-					"\nGroup gặp lỗi: " + threadName +
-					"\nLỗi gặp phải: " + content +
-					"\nThời gian báo: " + moment.tz("Asia/Ho_Chi_Minh").format("HH:mm:ss"),
-					admins[0]
-				);
-			})()
-			return api.sendMessage("Thông tin lỗi của bạn đã được gửi về admin!", threadID, messageID);
+			if (!content) return api.sendMessage(getText('noErrorInfo'), threadID, messageID);
+			var userName = await User.getName(senderID);
+			var threadName = await Thread.getName(threadID);
+			api.sendMessage(getText('reportInfo', userName, threadName, content, moment.tz("Asia/Ho_Chi_Minh").format("HH:mm:ss")), admins[0]);
+			return api.sendMessage(getText('reportSent'), threadID, messageID);
 		}
 
 		//nsfw
 		if (contentMessage.indexOf(`${prefix}nsfw`) == 0 && admins.includes(senderID)) {
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
 			if (content == 'off') {
-				if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đã bị tắt NSFW từ trước!", threadID, messageID);
+				if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage(getText('alreadyOffNSFW'), threadID, messageID);
 				Thread.blockNSFW(threadID).then((success) => {
-					if (!success) return api.sendMessage("Oops, không thể tắt NSFW ở nhóm này!", threadID, messageID);
-					api.sendMessage("Đã tắt NSFW thành công!", threadID, messageID);
+					if (!success) return api.sendMessage(getText('cantOffNSFW'), threadID, messageID);
+					api.sendMessage(getText('disabledNSFW'), threadID, messageID);
 					__GLOBAL.NSFWBlocked.push(threadID);
 				})
 			}
 			else if (content == 'on') {
-				if (!__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này chưa bị tắt NSFW", threadID, messageID);
+				if (!__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage(getText('alreadyOnNSFW'), threadID, messageID);
 				Thread.unblockNSFW(threadID).then(success => {
-					if (!success) return api.sendMessage("Oops, không thể bật NSFW ở nhóm này!", threadID, messageID);
-					api.sendMessage("Đã bật NSFW thành công!", threadID, messageID);
+					if (!success) return api.sendMessage(getText('cantOnNSFW'), threadID, messageID);
+					api.sendMessage(getText('enabledNSFW'), threadID, messageID);
 					__GLOBAL.NSFWBlocked.splice(__GLOBAL.NSFWBlocked.indexOf(threadID), 1);
 				});
 			}
 			return;
 		}
 
-		//restart
-		if (contentMessage == `${prefix}restart` && admins.includes(senderID)) return api.sendMessage(`Hệ thống restart khẩn ngay bây giờ!!`, threadID, () => require("node-cmd").run("pm2 restart 0"), messageID);
-
 		//admin command
 		if (contentMessage.indexOf(`${prefix}admin`) == 0 && admins.includes(senderID)) {
-			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
+			var contentSplit = contentMessage.split(" ");
+			var content = contentSplit[1];
+			var arg = contentSplit[2];
 			var helpList = JSON.parse(fs.readFileSync(__dirname + "/src/help/listAC.json"));
-			if (content.indexOf("all") == 0) {
+			if (!content || content.indexOf("settings") == 0) {
+				return api.sendMessage(getText('adminSetting1') + getText('adminSetting2'), threadID, (err, info) => {
+						if (err) throw err;
+						__GLOBAL.reply.push({
+							type: "admin_settings",
+							messageID: info.messageID,
+							target: parseInt(threadID),
+							author: senderID
+						});
+					}
+				);
+			}
+			else if (content.indexOf("help") == 0) {
+				if (helpList.some(item => item.name == arg)) return api.sendMessage(getText('adminHelpCmd', helpList.find(item => item.name == arg).name, helpList.find(item => item.name == arg).desc, prefix + helpList.find(item => item.name == arg).usage, prefix + helpList.find(item => item.name == arg).example), threadID, messageID);
+				else return api.sendMessage(getText('adminHelpInvalid', prefix), threadID, messageID);
+			}
+			else if (content.indexOf("all") == 0) {
 				var commandAdmin = [];
 				helpList.forEach(help => (!commandAdmin.some(item => item.name == help.name)) ? commandAdmin.push(help.name) : commandAdmin.find(item => item.name == help.name).push(help.name));
 				return api.sendMessage(commandAdmin.join(', '), threadID, messageID);
 			}
-			else if (content.indexOf("help") == 0) {
-				var helpCommand = content.slice(5, content.length);
-				if (helpList.some(item => item.name == helpCommand))
-					return api.sendMessage(
-						'=== Thông tin lệnh bạn đang tìm ===\n' +
-						'- Tên lệnh: ' + helpList.find(item => item.name == helpCommand).name + '\n' +
-						'- Thông tin: ' + helpList.find(item => item.name == helpCommand).decs + '\n' +
-						'- Cách dùng: ' + prefix + helpList.find(item => item.name == helpCommand).usage + '\n' +
-						'- Hướng dẫn: ' + prefix + helpList.find(item => item.name == helpCommand).example,
-						threadID, messageID
-					);
-				else return api.sendMessage(`Lệnh bạn nhập không hợp lệ, hãy gõ ${prefix}help để xem tất cả các lệnh có trong bot.`, threadID, messageID);
-			} else if (content.indexOf("listThread") == 0) {
-			
+			else if (content.indexOf("banUser") == 0) {
+				const mentions = Object.keys(event.mentions);
+				if (mentions.length == 0) {
+					return User.ban(parseInt(arg)).then(success => {
+						User.getName(parseInt(arg)).then(name => {
+							__GLOBAL.userBlocked.push(parseInt(arg));
+							logger(arg, 'Ban User');
+							if (__GLOBAL.userBlocked.includes(arg)) return api.sendMessage(getText('alreadyBannedUser', name, arg), threadID);
+							if (!success) return api.sendMessage(getText('cantBanUser'), threadID, messageID);
+							api.sendMessage(getText('bannedUser', name, arg), threadID, messageID);
+						});
+						logger(`${name} - ${arg}`, getText('banUser'));
+					});
+				}
+				else {
+					return mentions.forEach(id => {
+						id = parseInt(id);
+						let name = event.mentions[id].replace('@', '');
+						if (__GLOBAL.userBlocked.includes(id)) return api.sendMessage(getText('alreadyBannedUser', name, id), threadID, messageID);
+						User.ban(id).then((success) => {
+							if (!success) return api.sendMessage(getText('cantBanUser'), threadID, messageID);
+							api.sendMessage({
+								body: getText('bannedUser', name, id),
+								mentions: [{ tag: name, id }]
+							}, threadID, messageID);
+							__GLOBAL.userBlocked.push(id);
+							logger(`${name} - ${id}`, getText('banUser'));
+						});
+					});
+				};
+			}
+			else if (content.indexOf("unbanUser") == 0) {
+				const mentions = Object.keys(event.mentions);
+				if (mentions == 0) {
+					return User.unban(parseInt(arg)).then(success => {
+						User.getName(parseInt(arg)).then(name => {
+							const indexOfUser = __GLOBAL.userBlocked.indexOf(parseInt(arg));
+							if (indexOfUser == -1) return api.sendMessage(getText('notBannedUser', name, arg), threadID, messageID);
+							if (!success) return api.sendMessage(getText('cantUnbanUser'), threadID, messageID);
+							api.sendMessage(getText('unbannedUser', name, arg), threadID, messageID);
+							__GLOBAL.userBlocked.splice(indexOfUser, 1);
+							logger(`${name} - ${arg}`, getText('unbanUser'));
+						});
+					});
+				}
+				else {
+					return mentions.forEach(id => {
+						id = parseInt(id);
+						let name = event.mentions[id].replace('@', '');
+						const indexOfUser = __GLOBAL.userBlocked.indexOf(id);
+						if (indexOfUser == -1)
+							return api.sendMessage({
+								body: getText('notBannedUser', name, id),
+								mentions: [{ tag: name, id }]
+							}, threadID, messageID);
+						User.unban(id).then(success => {
+							if (!success) return api.sendMessage(getText('cantUnban'), threadID, messageID);
+							api.sendMessage({
+								body: getText('unbannedUser', name, id),
+								mentions: [{ tag: name, id }]
+							}, threadID, messageID);
+							__GLOBAL.userBlocked.splice(indexOfUser, 1);
+							logger(`${name} - ${id}`, getText('unbanUser'));
+						});
+					});
+				}
+			}
+			else if (content.indexOf("banThread") == 0) {
+				if (arg) return Thread.ban(parseInt(arg)).then(success => {
+					const indexOfThread = __GLOBAL.threadBlocked.indexOf(parseInt(arg));
+					if (indexOfThread != -1) return api.sendMessage(getText('alreadyBannedThread'), threadID, messageID);
+					if (!success) return api.sendMessage(getText('cantBanThread'), threadID, messageID);
+					api.sendMessage(getText('bannedThread'), threadID, messageID);
+					__GLOBAL.threadBlocked.push(parseInt(arg));
+					logger(arg, getText('banThread'));
+				});
+				else return Thread.ban(threadID).then(success => {
+					const indexOfThread = __GLOBAL.threadBlocked.indexOf(threadID);
+					if (indexOfThread != -1) return api.sendMessage(getText('alreadyBannedThread'), threadID, messageID);
+					if (!success) return api.sendMessage(getText('cantBanThread'), threadID, messageID);
+					api.sendMessage(getText('bannedThread'), threadID, messageID);
+					__GLOBAL.threadBlocked.push(threadID);
+					logger(threadID, getText('banThread'));
+				});
+			}
+			else if (content.indexOf("unbanThread") == 0) {
+				if (arg) return Thread.unban(parseInt(arg)).then(success => {
+					const indexOfThread = __GLOBAL.threadBlocked.indexOf(parseInt(arg));
+					if (indexOfThread == -1) return api.sendMessage(getText('notBannedThread'), threadID, messageID);
+					if (!success) return api.sendMessage(getText('cantUnbanThread'), threadID, messageID);
+					api.sendMessage(getText('unbannedThread'), threadID, messageID);
+					__GLOBAL.threadBlocked.splice(indexOfThread, 1);
+					logger(arg, getText('unbanThread'));
+				});
+				return Thread.unban(threadID).then(success => {
+					const indexOfThread = __GLOBAL.threadBlocked.indexOf(threadID);
+					if (indexOfThread == -1) return api.sendMessage(getText('notBannedThread'), threadID, messageID);
+					if (!success) return api.sendMessage(getText('cantUnbanThread'), threadID, messageID);
+					api.sendMessage(getText('unbannedThread'), threadID, messageID);
+					__GLOBAL.threadBlocked.splice(indexOfThread, 1);
+					logger(threadID, getText('unbanThread'));
+				});
+			}
+			else if (content.indexOf("banCmd") == 0) {
+				if (!arg) return api.sendMessage(getText('enterBanCmd'), threadID, messageID);
+				var jsonData = JSON.parse(fs.readFileSync(__dirname + "/src/cmds.json"));
+				if (arg == "list") return api.sendMessage(getText('listBannedCmd', nocmdData.banned.find(item => item.id == threadID).cmds), threadID, messageID);
+				if (!jsonData.cmds.includes(arg)) return api.sendMessage(getText('cantFindCmd', arg), threadID, messageID);
+				else {
+					if (jsonData.banned.some(item => item.id == threadID)) {
+						let getThread = jsonData.banned.find(item => item.id == threadID);
+						getThread.cmds.push(arg);
+					}
+					else {
+						let addThread = {
+							id: threadID,
+							cmds: []
+						};
+						addThread.cmds.push(arg);
+						jsonData.banned.push(addThread);
+					}
+					api.sendMessage(getText('bannedCmd'), threadID, messageID);
+				}
+				return fs.writeFileSync(__dirname + "/src/cmds.json", JSON.stringify(jsonData), "utf-8");
+			}
+			else if (content.indexOf("unbanCmd") == 0) {
+				if (!arg) return api.sendMessage(getText('enterUnbanCmd'), threadID, messageID);
+				var jsonData = JSON.parse(fs.readFileSync(__dirname + "/src/cmds.json"));
+				var getCMDS = jsonData.banned.find(item => item.id == threadID).cmds;
+				if (!getCMDS.includes(arg)) return api.sendMessage(getText('notBannedCmd'), threadID, messageID);
+				else {
+					let getIndex = getCMDS.indexOf(arg);
+					getCMDS.splice(getIndex, 1);
+					api.sendMessage(getText('unbannedCmd'), threadID, messageID);
+				}
+				return fs.writeFileSync(__dirname + "/src/cmds.json", JSON.stringify(jsonData), "utf-8");
+			}
+			else if (content.indexOf("resend") == 0) {
+				if (arg == 'off') {
+					if (__GLOBAL.resendBlocked.includes(threadID)) return api.sendMessage(getText('alreadyOffResend'), threadID, messageID);
+					return Thread.blockResend(threadID).then((success) => {
+						if (!success) return api.sendMessage(getText('cantOffResend'), threadID, messageID);
+						api.sendMessage(getText('disabledResend'), threadID, messageID);
+						__GLOBAL.resendBlocked.push(threadID);
+					})
+				}
+				else if (arg == 'on') {
+					if (!__GLOBAL.resendBlocked.includes(threadID)) return api.sendMessage(getText('notOffResend'), threadID, messageID);
+					return Thread.unblockResend(threadID).then(success => {
+						if (!success) return api.sendMessage(getText('cantOnResend'), threadID, messageID);
+						api.sendMessage(getText('enabledResend'), threadID, messageID);
+						__GLOBAL.resendBlocked.splice(__GLOBAL.resendBlocked.indexOf(threadID), 1);
+					});
+				}
+			}
+			else if (content.indexOf("createUser") == 0) {
+				const mentions = Object.keys(event.mentions);
+				if (mentions.length == 0) {
+					if (isNaN(arg)) return api.sendMessage(getText('notUserID'), threadID, messageID);
+					let success = await User.createUser(arg);
+					let name = await User.getName(arg);
+					(success) ? api.sendMessage(getText('addedUser', name), threadID, messageID) : api.sendMessage(getText('alreadyInDB', name), threadID, messageID);
+				}
+				else {
+					for (let i of mentions) {
+						let success = await User.createUser(i);
+						let name = await User.getName(i);
+						(success) ? api.sendMessage(getText('addedUser', name), threadID, messageID) : api.sendMessage(getText('alreadyInDB', name), threadID, messageID);
+					}
+				}
+				return;
+			}
+			else if (content.indexOf("addUser") == 0) return api.addUserToGroup(arg, threadID);
+			else if (content.indexOf("restart") == 0) return api.sendMessage(getText('restart'), threadID, () => require("node-cmd").run("pm2 restart 0"), messageID);
+			else return api.sendMessage(getText('adminHelpInvalid', prefix), threadID, messageID);
+		}
+
+		if (contentMessage.indexOf(`${prefix}levelup`) == 0) {
+			var arg = contentMessage.slice(prefix.length + 8, contentMessage.length);
+			if (arg == 'off') {
+				if (__GLOBAL.blockLevelUp.includes(threadID)) return api.sendMessage(getText('alreadyOffLUN'), threadID, messageID);
+				return Thread.blockLevelUp(threadID).then((success) => {
+					if (!success) return api.sendMessage(getText('cantOffLUN'), threadID, messageID);
+					api.sendMessage(getText('disabledLUN'), threadID, messageID);
+					__GLOBAL.blockLevelUp.push(threadID);
+				})
+			}
+			else if (arg == 'on') {
+				if (!__GLOBAL.blockLevelUp.includes(threadID)) return api.sendMessage(getText('alreadyOnLUN'), threadID, messageID);
+				return Thread.unblockLevelUp(threadID).then(success => {
+					if (!success) return api.sendMessage(getText('cantOnLUN'), threadID, messageID);
+					api.sendMessage(getText('enabledLUN'), threadID, messageID);
+					__GLOBAL.blockLevelUp.splice(__GLOBAL.blockLevelUp.indexOf(threadID), 1);
+				});
 			}
 		}
 
-	/* ==================== Help Commands ================*/
+		/* ==================== Help Commands ================*/
 
 		//help
 		if (contentMessage.indexOf(`${prefix}help`) == 0) {
@@ -376,29 +378,21 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var helpMsg = "";
 				helpList.forEach(help => (!helpGroup.some(item => item.group == help.group)) ? helpGroup.push({ group: help.group, cmds: [help.name] }) : helpGroup.find(item => item.group == help.group).cmds.push(help.name));
 				helpGroup.forEach(help => helpMsg += `===== ${help.group.charAt(0).toUpperCase() + help.group.slice(1)} =====\n${help.cmds.join(', ')}\n\n`);
-				return api.sendMessage(helpMsg, threadID, messageID);
+				return api.sendMessage(getText('helpMsg', helpList.length, helpMsg), threadID, messageID);
 			}
 			else {
 				if (helpList.some(item => item.name == content))
-					return api.sendMessage(
-						'=== Thông tin lệnh bạn đang tìm ===\n' +
-						'- Tên lệnh: ' + helpList.find(item => item.name == content).name + '\n' +
-						'- Nhóm lệnh: ' + helpList.find(item => item.name == content).group + '\n' +
-						'- Thông tin: ' + helpList.find(item => item.name == content).decs + '\n' +
-						'- Cách dùng: ' + prefix + helpList.find(item => item.name == content).usage + '\n' +
-						'- Hướng dẫn: ' + prefix + helpList.find(item => item.name == content).example,
-						threadID, messageID
-					);
-				else return api.sendMessage(`Lệnh bạn nhập không hợp lệ, hãy gõ ${prefix}help để xem tất cả các lệnh có trong bot.`, threadID, messageID);
+					return api.sendMessage(getText('helpInfo', helpList.find(item => item.name == content).name, helpList.find(item => item.name == content).desc, prefix + helpList.find(item => item.name == content).usage, prefix + helpList.find(item => item.name == content).example), threadID, messageID);
+				else return api.sendMessage(getText('generalHelpInvalid', prefix), threadID, messageID);
 			}
 		}
 
 		//yêu cầu công việc cho bot
 		if (contentMessage.indexOf(`${prefix}request`) == 0) {
-			var content = contentMessage.slice(prefix.length + 8,contentMessage.length);
+			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			if (!fs.existsSync(__dirname + "/src/requestList.json")) {
 				let requestList = [];
-				fs.writeFileSync(__dirname + "/src/requestList.json",JSON.stringify(requestList));
+				fs.writeFileSync(__dirname + "/src/requestList.json", JSON.stringify(requestList));
 			}
 			if (content.indexOf("add") == 0) {
 				var addnew = content.slice(4, content.length);
@@ -406,54 +400,54 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var getData = JSON.parse(getList);
 				getData.push(addnew);
 				fs.writeFileSync(__dirname + "/src/requestList.json", JSON.stringify(getData));
-				return api.sendMessage("Đã thêm: " + addnew, threadID, () => api.sendMessage("ID " + senderID + " Đã thêm '" + addnew + "' vào request list", admins[0]), messageID);
+				return api.sendMessage(getText('requestAdd1', addnew), threadID, () => api.sendMessage(getText('requestAdd2', senderID, addnew), admins[0]), messageID);
 			}
 			else if (content.indexOf("del") == 0 && admins.includes(senderID)) {
 				var deletethisthing = content.slice(4, content.length);
 				var getList = fs.readFileSync(__dirname + "/src/requestList.json");
 				var getData = JSON.parse(getList);
-				if (getData.length == 0) return api.sendMessage("Không tìm thấy " + deletethisthing, threadID, messageID);
+				if (getData.length == 0) return api.sendMessage(getText('requestNotFound', deletethisthing), threadID, messageID);
 				var itemIndex = getData.indexOf(deletethisthing);
 				getData.splice(itemIndex, 1);
 				fs.writeFileSync(__dirname + "/src/requestList.json", JSON.stringify(getData));
-				return api.sendMessage("Đã xóa: " + deletethisthing, threadID, messageID);
+				return api.sendMessage(getText('requestDelete', deletethisthing), threadID, messageID);
 			}
 			else if (content.indexOf("list") == 0) {
 				var getList = fs.readFileSync(__dirname + "/src/requestList.json");
 				var getData = JSON.parse(getList);
-				if (getData.length == 0) return api.sendMessage("Không có việc cần làm", threadID, messageID);
+				if (getData.length == 0) return api.sendMessage(getText('noRequest'), threadID, messageID);
 				let allWorks = "";
 				getData.map(item => allWorks = allWorks + `\n- ` + item);
-				return api.sendMessage("Đây là toàn bộ yêu cầu mà các bạn đã gửi:" + allWorks, threadID, messageID);
+				return api.sendMessage(getText('allRequests', allWorks), threadID, messageID);
 			}
 		}
 
-	/* ==================== Cipher Commands ================*/
+		/* ==================== Cipher Commands ================*/
 
 		//morse
 		if (contentMessage.indexOf(`${prefix}morse`) == 0) {
 			const morsify = require('morsify');
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
-			if (event.type == "message_reply") (content.indexOf('en') == 0) ? api.sendMessage(morsify.encode(event.messageReply.body), threadID, messageID) : (content.indexOf('de') == 0) ? api.sendMessage(morsify.decode(event.messageReply.body), threadID, messageID) : api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
-			else (content.indexOf('en') == 0) ? api.sendMessage(morsify.encode(content.slice(3, contentMessage.length)), threadID, messageID) : (content.indexOf('de') == 0) ? api.sendMessage(morsify.decode(content.slice(3, contentMessage.length)), threadID, messageID) : api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help morse`, threadID, messageID);
+			if (event.type == "message_reply") (content.indexOf('en') == 0) ? api.sendMessage(morsify.encode(event.messageReply.body), threadID, messageID) : (content.indexOf('de') == 0) ? api.sendMessage(morsify.decode(event.messageReply.body), threadID, messageID) : api.sendMessage(getText('incorrectSyntax', prefix, 'morse'), threadID, messageID);
+			else (content.indexOf('en') == 0) ? api.sendMessage(morsify.encode(content.slice(3, contentMessage.length)), threadID, messageID) : (content.indexOf('de') == 0) ? api.sendMessage(morsify.decode(content.slice(3, contentMessage.length)), threadID, messageID) : api.sendMessage(getText('incorrectSyntax', prefix, 'morse'), threadID, messageID);
 		}
 
 		//caesar
 		if (contentMessage.indexOf(`${prefix}caesar`) == 0) {
-			if (process.env.CAESAR == '' || process.env.CAESAR == null) return api.sendMessage('Chưa đặt mật khẩu CAESAR trong file .env', threadID, messageID);
+			if (process.env.CAESAR == '' || process.env.CAESAR == null) return api.sendMessage(getText('pwdNotFound', 'CAESAR'), threadID, messageID);
 			const Caesar = require('caesar-salad').Caesar;
 			var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
-			if (event.type == "message_reply")(content.indexOf('encode') == 0) ? api.sendMessage(Caesar.Cipher(process.env.CAESAR).crypt(event.messageReply.body), threadID, messageID) : (content.indexOf('decode') == 0) ? api.sendMessage(Caesar.Decipher(process.env.CAESAR).crypt(event.messageReply.body), threadID, messageID) : api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help caesar`, threadID, messageID);
-			else(content.indexOf('encode') == 0) ? api.sendMessage(Caesar.Cipher(process.env.CAESAR).crypt(content.slice(3, contentMessage.length)), threadID, messageID) : (content.indexOf('decode') == 0) ? api.sendMessage(Caesar.Decipher(process.env.CAESAR).crypt(content.slice(3, contentMessage.length)), threadID, messageID) : api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help caesar`, threadID, messageID);
+			if (event.type == "message_reply") (content.indexOf('encode') == 0) ? api.sendMessage(Caesar.Cipher(process.env.CAESAR).crypt(event.messageReply.body), threadID, messageID) : (content.indexOf('decode') == 0) ? api.sendMessage(Caesar.Decipher(process.env.CAESAR).crypt(event.messageReply.body), threadID, messageID) : api.sendMessage(getText('incorrectSyntax', prefix, 'caesar'), threadID, messageID);
+			else (content.indexOf('encode') == 0) ? api.sendMessage(Caesar.Cipher(process.env.CAESAR).crypt(content.slice(3, contentMessage.length)), threadID, messageID) : (content.indexOf('decode') == 0) ? api.sendMessage(Caesar.Decipher(process.env.CAESAR).crypt(content.slice(3, contentMessage.length)), threadID, messageID) : api.sendMessage(getText('incorrectSyntax', prefix, 'caesar'), threadID, messageID);
 		}
 
 		//vigenere
 		if (contentMessage.indexOf(`${prefix}vigenere`) == 0) {
-			if (process.env.VIGENERE == '' || process.env.VIGENERE == null) return api.sendMessage('Chưa đặt mật khẩu VIGENERE trong file .env', threadID, messageID);
+			if (process.env.VIGENERE == '' || process.env.VIGENERE == null) return api.sendMessage(getText('pwdNotFound', 'VIGENERE'), threadID, messageID);
 			const Vigenere = require('caesar-salad').Vigenere;
 			var content = contentMessage.slice(prefix.length + 9, contentMessage.length);
-			if (event.type == "message_reply")(content.indexOf('en') == 0) ? api.sendMessage(Vigenere.Cipher(process.env.VIGENERE).crypt(event.messageReply.body), threadID, messageID) : (content.indexOf('de') == 0) ? api.sendMessage(Vigenere.Decipher(process.env.VIGENERE).crypt(event.messageReply.body), threadID, messageID) : api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help vigenere`, threadID, messageID)
-			else(content.indexOf('en') == 0) ? api.sendMessage(Vigenere.Cipher(process.env.VIGENERE).crypt(content.slice(3, contentMessage.length)), threadID, messageID) : (content.indexOf('de') == 0) ? api.sendMessage(Vigenere.Decipher(process.env.VIGENERE).crypt(content.slice(3, contentMessage.length)), threadID, messageID) : api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help vigenere`, threadID, messageID);
+			if (event.type == "message_reply") (content.indexOf('en') == 0) ? api.sendMessage(Vigenere.Cipher(process.env.VIGENERE).crypt(event.messageReply.body), threadID, messageID) : (content.indexOf('de') == 0) ? api.sendMessage(Vigenere.Decipher(process.env.VIGENERE).crypt(event.messageReply.body), threadID, messageID) : api.sendMessage(getText('incorrectSyntax', prefix, 'vigenere'), threadID, messageID)
+			else (content.indexOf('en') == 0) ? api.sendMessage(Vigenere.Cipher(process.env.VIGENERE).crypt(content.slice(3, contentMessage.length)), threadID, messageID) : (content.indexOf('de') == 0) ? api.sendMessage(Vigenere.Decipher(process.env.VIGENERE).crypt(content.slice(3, contentMessage.length)), threadID, messageID) : api.sendMessage(getText('incorrectSyntax', prefix, 'vigenere'), threadID, messageID);
 		}
 
 		//rot47
@@ -464,30 +458,69 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			else (content.indexOf('en') == 0) ? api.sendMessage(ROT47.Cipher().crypt(content.slice(3, contentMessage.length)), threadID, messageID) : (content.indexOf('de') == 0) ? api.sendMessage(ROT47.Decipher().crypt(content.slice(3, contentMessage.length)), threadID, messageID) : api.sendMessage(`Sai cú pháp, vui lòng tìm hiểu thêm tại ${prefix}help rot47`, threadID, messageID);
 		}
 
-	/* ==================== Media Commands ==================== */
+		/* ==================== Media Commands ==================== */
 
 		//youtube music
-		if (contentMessage.indexOf(`${prefix}audio`) == 0)
-			return (async () => {
-				var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 6, contentMessage.length);
-				var ytdl = require("ytdl-core");
-				var ffmpeg = require("fluent-ffmpeg");
-				var ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-				ffmpeg.setFfmpegPath(ffmpegPath);
-				if (content.indexOf("http") == -1) content = (await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&key=${googleSearch}&q=${encodeURIComponent(content)}`, {responseType: 'json'})).data.items[0].id.videoId;
-				ytdl.getInfo(content, (err, info) => (info.length_seconds > 360) ? api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID) : '');
-				return ffmpeg().input(ytdl(content)).toFormat("mp3").pipe(fs.createWriteStream(__dirname + "/src/music.mp3")).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/music.mp3")}, threadID, () => fs.unlinkSync(__dirname + "/src/music.mp3"), messageID));
-			})();
+		if (contentMessage.indexOf(`${prefix}audio`) == 0) {
+			var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 6, contentMessage.length);
+			var ytdl = require("ytdl-core");
+			if (!googleSearch) return api.sendMessage(getText('noAPIKey', 'Google Search'), threadID, messageID);
+			if (content.indexOf("http") == -1) {
+				return request(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&key=${googleSearch}&q=${encodeURIComponent(content)}`, function (err, response, body) {
+					var retrieve = JSON.parse(body), msg = '', num = 0, link = [];
+					if (!retrieve) return api.sendMessage(getText('dieAPI'), threadID);
+					if (retrieve.items.length < 1) return api.sendMessage(getText('noVA'), threadID, messageID);
+					for (var i = 0; i < 5; i++) {
+						if (typeof retrieve.items[i].id.videoId != 'undefined') {
+							link.push(retrieve.items[i].id.videoId);
+							msg += `${num += 1}. ${decodeURIComponent(retrieve.items[i].snippet.title)} [https://youtu.be/${retrieve.items[i].id.videoId}]\n\n`;
+						}
+					}
+					api.sendMessage(getText('foundVA', link.length, msg), threadID, (err, info) => __GLOBAL.reply.push({ type: "media_audio", messageID: info.messageID, target: parseInt(threadID), author: senderID, url: link }));
+				});
+			}
+			return ytdl.getInfo(content).then(res => {
+				if (res.videoDetails.lengthSeconds > 600) return api.sendMessage(getText('exceededLength', 'Audio'), threadID, messageID);
+				else {
+					let id = res.videoDetails.videoId;
+					ytdl(content, { filter: format => format.itag == '140' }).pipe(fs.createWriteStream(__dirname + `/src/${id}.m4a`)).on('close', () => {
+						if (fs.statSync(__dirname + `/src/${id}.m4a`).size > 26214400) return api.sendMessage('Không thể gửi file vì dung lượng lớn hơn 25MB.', threadID, messageID);
+						else api.sendMessage({ attachment: fs.createReadStream(__dirname + `/src/${id}.m4a`) }, threadID, () => fs.unlinkSync(__dirname + `/src/${id}.m4a`), messageID);
+					});
+				}
+			});
+		}
 
 		//youtube video
-		if (contentMessage.indexOf(`${prefix}video`) == 0)
-			return (async () => {
-				var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 6, contentMessage.length);
-				var ytdl = require("ytdl-core");
-				if (content.indexOf("http") == -1) content = (await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&key=${googleSearch}&q=${encodeURIComponent(content)}`, {responseType: 'json'})).data.items[0].id.videoId;
-				ytdl.getInfo(content, (err, info) => (info.length_seconds > 360) ? api.sendMessage("Độ dài video vượt quá mức cho phép, tối đa là 6 phút!", threadID, messageID) : '');
-				return ytdl(content).pipe(fs.createWriteStream(__dirname + "/src/video.mp4")).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/video.mp4")}, threadID, () => fs.unlinkSync(__dirname + "/src/video.mp4"), messageID));
-			})();
+		if (contentMessage.indexOf(`${prefix}video`) == 0) {
+			var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 6, contentMessage.length);
+			var ytdl = require("ytdl-core");
+			if (!googleSearch) return api.sendMessage(getText('noAPIKey', 'Google Search'), threadID, messageID);
+			if (content.indexOf("http") == -1) {
+				return request(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&key=${googleSearch}&q=${encodeURIComponent(content)}`, function (err, response, body) {
+					var retrieve = JSON.parse(body), msg = '', num = 0, link = [];
+					if (!retrieve) return api.sendMessage(getText('dieAPI'), threadID);
+					if (retrieve.items < 1) return api.sendMessage(getText('noVA'), threadID, messageID);
+					for (var i = 0; i < 5; i++) {
+						if (typeof retrieve.items[i].id.videoId != 'undefined') {
+							link.push(retrieve.items[i].id.videoId);
+							msg += `${num += 1}. ${decodeURIComponent(retrieve.items[i].snippet.title)} [https://youtu.be/${retrieve.items[i].id.videoId}]\n\n`;
+						}
+					}
+					api.sendMessage(getText('foundVA', link.length, msg), threadID, (err, info) => __GLOBAL.reply.push({ type: "media_video", messageID: info.messageID, target: parseInt(threadID), author: senderID, url: link }));
+				});
+			}
+			return ytdl.getInfo(content).then(res => {
+				if (res.videoDetails.lengthSeconds > 600) return api.sendMessage(getText('exceededLength', 'Video'), threadID, messageID);
+				else {
+					let id = res.videoDetails.videoId;
+					ytdl(content).pipe(fs.createWriteStream(__dirname + `/src/${id}.mp4`)).on('close', () => {
+						if (fs.statSync(__dirname + `/src/${id}.mp4`).size > 26214400) return api.sendMessage('Không thể gửi file vì dung lượng lớn hơn 25MB.', threadID, messageID);
+						else api.sendMessage({ attachment: fs.createReadStream(__dirname + `/src/${id}.mp4`) }, threadID, () => fs.unlinkSync(__dirname + `/src/${id}.mp4`), messageID);
+					});
+				}
+			});
+		}
 
 		//anime
 		if (contentMessage.indexOf(`${prefix}anime`) == 0) {
@@ -498,13 +531,14 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				let sfwList = [];
 				Object.keys(data).forEach(endpoint => sfwList.push(endpoint));
 				let sfwTags = sfwList.join(', ');
-				return api.sendMessage(`=== Tất cả các tag Anime ===\n` + sfwTags, threadID, messageID);
+				return api.sendMessage(getText('allTags', 'Anime', sfwTags), threadID, messageID);
 			}
 			return request(data[content], (error, response, body) => {
 				let picData = JSON.parse(body);
-				let getURL = picData.data.response.url;
+				let getURL = "";
+				(!picData.data) ? getURL = picData.url : getURL = picData.data.response.url;
 				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
-				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`)}, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID));
+				request(getURL).pipe(fs.createWriteStream(__dirname + `/src/anime.${ext}`)).on("close", () => api.sendMessage({ attachment: fs.createReadStream(__dirname + `/src/anime.${ext}`) }, threadID, () => fs.unlinkSync(__dirname + `/src/anime.${ext}`), messageID));
 			});
 		}
 
@@ -515,7 +549,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var content = JSON.parse(body);
 				let title = content.title;
 				var baseurl = content.url;
-				let callback = function() {
+				let callback = function () {
 					api.sendMessage({
 						body: `${title}`,
 						attachment: fs.createReadStream(__dirname + "/src/meme.jpg")
@@ -527,13 +561,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//gif
 		if (contentMessage.indexOf(`${prefix}gif`) == 0) {
 			var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
-			if (content.length == -1) return api.sendMessage(`Bạn đã nhập sai format, vui lòng ${prefix}help gif để biết thêm chi tiết!`, threadID, messageID);
+			if (content.length == -1) return api.sendMessage(getText('incorrectSyntax', prefix, 'gif'), threadID, messageID);
 			if (content.indexOf(`cat`) !== -1) {
 				return request(`https://api.tenor.com/v1/random?key=${tenor}&q=cat&limit=1`, (err, response, body) => {
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
-					request(stringURL).pipe(fs.createWriteStream(__dirname + `/src/randompic.gif`)).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/randompic.gif")}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
+					request(stringURL).pipe(fs.createWriteStream(__dirname + `/src/randompic.gif`)).on("close", () => api.sendMessage({ attachment: fs.createReadStream(__dirname + "/src/randompic.gif") }, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
 				});
 			}
 			else if (content.indexOf(`dog`) == 0) {
@@ -541,7 +575,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
-					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/randompic.gif")}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
+					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", () => api.sendMessage({ attachment: fs.createReadStream(__dirname + "/src/randompic.gif") }, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
 				});
 			}
 			else if (content.indexOf(`capoo`) == 0) {
@@ -549,7 +583,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
-					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/randompic.gif")}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
+					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", () => api.sendMessage({ attachment: fs.createReadStream(__dirname + "/src/randompic.gif") }, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
 				});
 			}
 			else if (content.indexOf(`mixi`) == 0) {
@@ -557,7 +591,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
-					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/randompic.gif")}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
+					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", () => api.sendMessage({ attachment: fs.createReadStream(__dirname + "/src/randompic.gif") }, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
 				});
 			}
 			else if (content.indexOf(`bomman`) == 0) {
@@ -565,20 +599,20 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					if (err) throw err;
 					var string = JSON.parse(body);
 					var stringURL = string.results[0].media[0].tinygif.url;
-					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + "/src/randompic.gif")}, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
+					request(stringURL).pipe(fs.createWriteStream(__dirname + "/src/randompic.gif")).on("close", () => api.sendMessage({ attachment: fs.createReadStream(__dirname + "/src/randompic.gif") }, threadID, () => fs.unlinkSync(__dirname + "/src/randompic.gif"), messageID));
 				});
 			}
-			else return api.sendMessage(`Tag của bạn nhập không tồn tại, vui lòng đọc hướng dẫn sử dụng trong ${prefix}help gif`, threadID, messageID);
+			else return api.sendMessage(getText('incorrectSyntax', prefix, 'gif'), threadID, messageID);
 		}
 
 		//hug
 		if (contentMessage.indexOf(`${prefix}hug`) == 0 && contentMessage.indexOf('@') !== -1)
-			return request('https://nekos.life/api/v2/img/hug', (err, response, body) =>{
+			return request('https://nekos.life/api/v2/img/hug', (err, response, body) => {
 				let picData = JSON.parse(body);
 				let getURL = picData.url;
 				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
 				let tag = contentMessage.slice(prefix.length + 5, contentMessage.length).replace("@", "");
-				let callback = function() {
+				let callback = function () {
 					api.sendMessage({
 						body: tag + ", I wanna hug you ❤️",
 						mentions: [{
@@ -593,12 +627,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//kiss
 		if (contentMessage.indexOf(`${prefix}kiss`) == 0 && contentMessage.indexOf('@') !== -1)
-			return request('https://nekos.life/api/v2/img/kiss', (err, response, body) =>{
+			return request('https://nekos.life/api/v2/img/kiss', (err, response, body) => {
 				let picData = JSON.parse(body);
 				let getURL = picData.url;
 				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
 				let tag = contentMessage.slice(prefix.length + 6, contentMessage.length).replace("@", "");
-				let callback = function() {
+				let callback = function () {
 					api.sendMessage({
 						body: tag + ", I wanna kiss you ❤️",
 						mentions: [{
@@ -613,12 +647,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//tát
 		if (contentMessage.indexOf(`${prefix}slap`) == 0 && contentMessage.indexOf('@') !== -1)
-			return request('https://nekos.life/api/v2/img/slap', (err, response, body) =>{
+			return request('https://nekos.life/api/v2/img/slap', (err, response, body) => {
 				let picData = JSON.parse(body);
 				let getURL = picData.url;
 				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
 				let tag = contentMessage.slice(prefix.length + 5, contentMessage.length).replace("@", "");
-				let callback = function() {
+				let callback = function () {
 					api.sendMessage({
 						body: tag + ", take this slap 😈",
 						mentions: [{
@@ -633,11 +667,11 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//meow
 		if (contentMessage.indexOf(`${prefix}meow`) == 0)
-			return request('http://aws.random.cat/meow', (err, response, body) =>{
+			return request('http://aws.random.cat/meow', (err, response, body) => {
 				let picData = JSON.parse(body);
 				let getURL = picData.file;
 				let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
-				let callback = function() {
+				let callback = function () {
 					api.sendMessage({
 						attachment: fs.createReadStream(__dirname + `/src/meow.${ext}`)
 					}, threadID, () => fs.unlinkSync(__dirname + `/src/meow.${ext}`), messageID);
@@ -648,78 +682,178 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//sauce
 		if (contentMessage == `${prefix}sauce`) {
 			const sagiri = require('sagiri'), search = sagiri(saucenao);
-			if (event.type != "message_reply") return api.sendMessage(`Vui lòng bạn reply bức ảnh cần phải tìm!`, threadID, messageID);
-			if (event.messageReply.attachments.length > 1) return api.sendMessage(`Vui lòng reply chỉ một ảnh!`, threadID, messageID);
+			if (event.type != "message_reply") return api.sendMessage(getText('replyPic'), threadID, messageID);
+			if (event.messageReply.attachments.length > 1) return api.sendMessage(getText('onePicOnly'), threadID, messageID);
 			if (event.messageReply.attachments[0].type == 'photo') {
-				if (saucenao == '' || typeof saucenao == 'undefined') return api.sendMessage(`Chưa có api của saucenao!`, threadID, messageID);
+				if (saucenao == '' || typeof saucenao == 'undefined') return api.sendMessage(getText('noAPIKey', 'Saucenao'), threadID, messageID);
 				return search(event.messageReply.attachments[0].url).then(response => {
 					let data = response[0];
 					let results = {
 						similarity: data.similarity,
-						material: data.raw.data.material || 'Không có',
+						material: data.raw.data.material || 'None',
 						characters: data.raw.data.characters || 'Original',
-						creator: data.raw.data.creator || 'Không biết',
+						creator: data.raw.data.creator || 'None',
 						site: data.site,
 						url: data.url
 					};
 					const minSimilarity = 50;
 					if (minSimilarity <= ~~results.similarity) {
-						api.sendMessage(
-							'Đây là kết quả tìm kiếm được\n' +
-							'-------------------------\n' +
-							'- Độ tương tự: ' + results.similarity + '%\n' +
-							'- Material: ' + results.material + '\n' +
-							'- Characters: ' + results.characters + '\n' +
-							'- Creator: ' + results.creator + '\n' +
-							'- Original site: ' + results.site + ' - ' + results.url,
-							threadID, messageID
-						);
+						api.sendMessage(getText('sauceResult', results.similarity, results.material, results.characters, results.creator, results.url), threadID, messageID);
 					}
-					else api.sendMessage(`Không thấy kết quả nào trùng với ảnh bạn đang tìm kiếm :'(`, threadID, messageID);
+					else api.sendMessage(getText('noSauce'), threadID, messageID);
 				});
 			}
 		}
 
-	/* ==================== General Commands ================*/
-	
+		//change-my-mind
+		if (contentMessage.indexOf(`${prefix}change-mind`) == 0) {
+			var content = contentMessage.slice(prefix.length + 12, contentMessage.length);
+			const { createCanvas, loadImage, registerFont } = require('canvas');
+			const path = require('path');
+			const __root = path.resolve(__dirname, "../material");
+			let pathImg = __root + `/result.png`;
+			registerFont(__root + '/fonts/Noto-Regular.ttf', { family: 'Noto' });
+			registerFont(__root + '/fonts/Noto-CJK.otf', { family: 'Noto' });
+			registerFont(__root + '/fonts/Noto-Emoji.ttf', { family: 'Noto' });
+			const base = await loadImage(__root + "/meme/change-my-mind.png");
+			const canvas = createCanvas(base.width, base.height);
+			const ctx = canvas.getContext('2d');
+			ctx.textBaseline = 'top';
+			ctx.drawImage(base, 0, 0);
+			ctx.rotate(-6 * (Math.PI / 180));
+			ctx.font = '28px Noto';
+			let fontSize = 28;
+			while (ctx.measureText(content).width > 309) {
+				fontSize--;
+				ctx.font = `${fontSize}px Noto`;
+			}
+			const lines = await Image.wrapText(ctx, content, 206);
+			ctx.fillText(lines.join('\n'), 184, 253, 206);
+			ctx.rotate(6 * (Math.PI / 180));
+			const imageBuffer = canvas.toBuffer();
+			fs.writeFileSync(pathImg, imageBuffer);
+			return api.sendMessage({
+				attachment: fs.createReadStream(pathImg)
+			}, threadID, () => fs.unlinkSync(pathImg), messageID);
+		}
+
+		//two-buttons
+		if (contentMessage.indexOf(`${prefix}buttons`) == 0) {
+			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
+			var split = content.split(" | ");
+			var first = split[0];
+			var second = split[1];
+			const { createCanvas, loadImage, registerFont } = require('canvas');
+			const path = require('path');
+			const __root = path.resolve(__dirname, "../material");
+			let pathImg = __root + `/result.png`;
+			registerFont(__root + '/fonts/Noto-Regular.ttf', { family: 'Noto' });
+			registerFont(__root + '/fonts/Noto-CJK.otf', { family: 'Noto' });
+			registerFont(__root + '/fonts/Noto-Emoji.ttf', { family: 'Noto' });
+			const base = await loadImage(__root + "/meme/two-buttons.png");
+			const canvas = createCanvas(base.width, base.height);
+			const ctx = canvas.getContext('2d');
+			ctx.textBaseline = 'top';
+			ctx.drawImage(base, 0, 0);
+			ctx.rotate(-12 * (Math.PI / 180));
+			ctx.font = '34px Noto';
+			let fontSize = 34;
+			while (ctx.measureText(first).width > 366) {
+				fontSize--;
+				ctx.font = `${fontSize}px Noto`;
+			}
+			const firstLines = await Image.wrapText(ctx, first, 183);
+			let lineOffset = 0;
+			for (let i = 0; i < firstLines.length; i++) {
+				ctx.fillText(firstLines[i], 25 + lineOffset, 116 + (fontSize * i) + (10 * i), 183);
+				lineOffset += 5;
+			}
+			ctx.font = '34px Noto';
+			fontSize = 34;
+			while (ctx.measureText(second).width > 244) {
+				fontSize--;
+				ctx.font = `${fontSize}px Noto`;
+			}
+			const secondLines = await Image.wrapText(ctx, second, 118);
+			lineOffset = 0;
+			for (let i = 0; i < secondLines.length; i++) {
+				ctx.fillText(secondLines[i], 254 + lineOffset, 130 + (fontSize * i) + (10 * i), 118);
+				lineOffset += 5;
+			}
+			ctx.rotate(12 * (Math.PI / 180));
+			const imageBuffer = canvas.toBuffer();
+			fs.writeFileSync(pathImg, imageBuffer);
+			return api.sendMessage({
+				attachment: fs.createReadStream(pathImg)
+			}, threadID, () => fs.unlinkSync(pathImg), messageID);
+		}
+
+		//new-password
+		if (contentMessage.indexOf(`${prefix}new-pwd`) == 0) {
+			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
+			var split = content.split(" | ");
+			var weak = split[0];
+			var strong = split[1];
+			const { createCanvas, loadImage, registerFont } = require('canvas');
+			const path = require('path');
+			const __root = path.resolve(__dirname, "../material");
+			let pathImg = __root + `/result.png`;
+			registerFont(__root + '/fonts/Noto-Regular.ttf', { family: 'Noto' });
+			registerFont(__root + '/fonts/Noto-CJK.otf', { family: 'Noto' });
+			registerFont(__root + '/fonts/Noto-Emoji.ttf', { family: 'Noto' });
+			const base = await loadImage(__root + "/meme/new-password.png");
+			const canvas = createCanvas(base.width, base.height);
+			const ctx = canvas.getContext('2d');
+			ctx.drawImage(base, 0, 0);
+			ctx.font = '25px Noto';
+			ctx.fillText(Image.shortenText(ctx, weak, 390), 40, 113);
+			ctx.fillText(Image.shortenText(ctx, strong, 390), 40, 351);
+			const imageBuffer = canvas.toBuffer();
+			fs.writeFileSync(pathImg, imageBuffer);
+			return api.sendMessage({
+				attachment: fs.createReadStream(pathImg)
+			}, threadID, () => fs.unlinkSync(pathImg), messageID);
+		}
+
+		/* ==================== General Commands ================*/
+
 		//shortcut
 		if (contentMessage.indexOf(`${prefix}short`) == 0) {
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
-			if (!content) return api.sendMessage(`Không đúng format. Hãy tìm hiểu thêm tại ${prefix}help short.`, threadID, messageID);
+			if (!content) return api.sendMessage(getText('incorrectSyntax', prefix, 'short'), threadID, messageID);
 			if (content.indexOf(`del`) == 0) {
 				let delThis = contentMessage.slice(prefix.length + 10, contentMessage.length);
-				if (!delThis) return api.sendMessage("Chưa nhập shortcut cần xóa.", threadID, messageID);
+				if (!delThis) return api.sendMessage(getText('didntEnterShort'), threadID, messageID);
 				return fs.readFile(__dirname + "/src/shortcut.json", "utf-8", (err, data) => {
 					if (err) throw err;
 					var oldData = JSON.parse(data);
 					var getThread = oldData.find(item => item.id == threadID).shorts;
-					if (!getThread.some(item => item.in == delThis)) return api.sendMessage("Shortcut này không tồn tại.", threadID, messageID);
+					if (!getThread.some(item => item.in == delThis)) return api.sendMessage(getText('notExistsShort'), threadID, messageID);
 					getThread.splice(getThread.findIndex(item => item.in === delThis), 1);
-					fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => (err) ? console.error(err) : api.sendMessage("Xóa shortcut thành công!", threadID, messageID));
+					fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => (err) ? console.error(err) : api.sendMessage(getText('deletedShort'), threadID, messageID));
 				});
 			}
-			else if (content.indexOf(`all`) == 0) 
+			else if (content.indexOf(`all`) == 0)
 				return fs.readFile(__dirname + "/src/shortcut.json", "utf-8", (err, data) => {
 					if (err) throw err;
 					let allData = JSON.parse(data);
 					let msg = '';
-					if (!allData.some(item => item.id == threadID)) return api.sendMessage('Hiện tại không có shortcut nào.', threadID, messageID);
+					if (!allData.some(item => item.id == threadID)) return api.sendMessage(getText('noShort'), threadID, messageID);
 					if (allData.some(item => item.id == threadID)) {
 						let getThread = allData.find(item => item.id == threadID).shorts;
-						getThread.forEach(item => msg = msg + item.in + ' -> ' + item.out + '\n');
+						getThread.forEach(item => msg = '\n' + msg + item.in + ' -> ' + item.out);
 					}
-					if (!msg) return api.sendMessage('Hiện tại không có shortcut nào.', threadID, messageID);
-					msg = 'Tất cả shortcut đang có trong group là:\n' + msg;
-					api.sendMessage(msg, threadID, messageID);
+					if (!msg) return api.sendMessage(getText('noShort'), threadID, messageID);
+					api.sendMessage(getText('allShorts', msg), threadID, messageID);
 				});
 			else {
 				let narrow = content.indexOf(" => ");
-				if (narrow == -1) return api.sendMessage(`Không đúng format. Hãy tìm hiểu thêm tại ${prefix}help short.`, threadID, messageID);
+				if (narrow == -1) return api.sendMessage(getText('incorrectSyntax', prefix, 'short'), threadID, messageID);
 				let shortin = content.slice(0, narrow);
 				let shortout = content.slice(narrow + 4, content.length);
-				if (shortin == shortout) return api.sendMessage('Input và output giống nhau', threadID, messageID);
-				if (!shortin) return api.sendMessage("Bạn chưa nhập input.", threadID, messageID);
-				if (!shortout) return api.sendMessage("Bạn chưa nhập output.", threadID, messageID);
+				if (shortin == shortout) return api.sendMessage(getText('sameIO'), threadID, messageID);
+				if (!shortin) return api.sendMessage(getText('noIO', 'Input'), threadID, messageID);
+				if (!shortout) return api.sendMessage(getText('noIO', 'Output'), threadID, messageID);
 				return fs.readFile(__dirname + "/src/shortcut.json", "utf-8", (err, data) => {
 					if (err) throw err;
 					var oldData = JSON.parse(data);
@@ -730,13 +864,19 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						}
 						addThis.shorts.push({ in: shortin, out: shortout });
 						oldData.push(addThis);
-						return fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => (err) ? console.error(err) : api.sendMessage("Tạo shortcut mới thành công!", threadID, messageID));
+						return fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => (err) ? console.error(err) : api.sendMessage(getText('createdShort'), threadID, messageID));
 					}
 					else {
 						let getShort = oldData.find(item => item.id == threadID);
-						if (getShort.shorts.some(item => item.in == shortin)) return api.sendMessage("Shortcut này đã tồn tại trong group này!", threadID, messageID);
+						if (getShort.shorts.some(item => item.in == shortin)) {
+							let index = getShort.shorts.indexOf(getShort.shorts.find(item => item.in == shortin));
+							let output = getShort.shorts.find(item => item.in == shortin).out;
+							getShort.shorts[index].out = output + " | " + shortout;
+							api.sendMessage(getText('dupShort'), threadID, messageID);
+							return fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8");
+						}
 						getShort.shorts.push({ in: shortin, out: shortout });
-						return fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => (err) ? console.error(err) : api.sendMessage("Tạo shortcut mới thành công!", threadID, messageID));
+						return fs.writeFile(__dirname + "/src/shortcut.json", JSON.stringify(oldData), "utf-8", (err) => (err) ? console.error(err) : api.sendMessage(getText('createdShort'), threadID, messageID));
 					}
 				});
 			}
@@ -749,17 +889,17 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var wakeTime = [];
 			if (!content) {
 				for (var i = 1; i < 7; i++) wakeTime.push(moment().utcOffset("+07:00").add(90 * i + 15, 'm').format("HH:mm"));
-				return api.sendMessage("Nếu bạn đi ngủ bây giờ, những thời gian hoàn hảo nhất để thức dậy là:\n" + wakeTime.join(', ') + "\nFact: Thời gian để bạn vào giấc ngủ từ lúc nhắm mắt là 15-20 phút", threadID, messageID);
+				return api.sendMessage(getText('sleepNow', wakeTime.join(', ')), threadID, messageID);
 			}
 			else {
-				if (content.indexOf(":") == -1) return api.sendMessage(`Không đúng format, hãy xem trong ${prefix}help`, threadID, messageID);
+				if (content.indexOf(":") == -1) return api.sendMessage(getText('incorrectSyntax', prefix, 'sleep'), threadID, messageID);
 				var contentHour = content.split(":")[0];
 				var contentMinute = content.split(":")[1];
-				if (isNaN(contentHour) || isNaN(contentMinute) || contentHour > 23 || contentMinute > 59 || contentHour < 0 || contentMinute < 0 || contentHour.length != 2 || contentMinute.length != 2)  return api.sendMessage(`Không đúng format, hãy xem trong ${prefix}help`, threadID, messageID);				var getTime = moment().utcOffset("+07:00").format();
+				if (isNaN(contentHour) || isNaN(contentMinute) || contentHour > 23 || contentMinute > 59 || contentHour < 0 || contentMinute < 0 || contentHour.length != 2 || contentMinute.length != 2) return api.sendMessage(getText('incorrectSyntax', prefix, 'sleep'), threadID, messageID); var getTime = moment().utcOffset("+07:00").format();
 				var time = getTime.slice(getTime.indexOf("T") + 1, getTime.indexOf("+"));
 				var sleepTime = getTime.replace(time.split(":")[0] + ":", contentHour + ":").replace(time.split(":")[1] + ":", contentMinute + ":");
 				for (var i = 1; i < 7; i++) wakeTime.push(moment(sleepTime).utcOffset("+07:00").add(90 * i + 15, 'm').format("HH:mm"));
-				return api.sendMessage("Nếu bạn đi ngủ vào lúc " + content + ", những thời gian hoàn hảo nhất để thức dậy là:\n" + wakeTime.join(', ') + "\nFact: Thời gian để bạn vào giấc ngủ từ lúc nhắm mắt là 15-20 phút", threadID, messageID);
+				return api.sendMessage(getText('sleep', content, wakeTime.join(', ')), threadID, messageID);
 			}
 		}
 
@@ -771,33 +911,64 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var sleepTime = [];
 			var contentHour = content.split(":")[0];
 			var contentMinute = content.split(":")[1];
-			if (isNaN(contentHour) || isNaN(contentMinute) || contentHour > 23 || contentMinute > 59 || contentHour < 0 || contentMinute < 0 || contentHour.length != 2 || contentMinute.length != 2)  return api.sendMessage(`Không đúng format, hãy xem trong ${prefix}help`, threadID, messageID);
+			if (isNaN(contentHour) || isNaN(contentMinute) || contentHour > 23 || contentMinute > 59 || contentHour < 0 || contentMinute < 0 || contentHour.length != 2 || contentMinute.length != 2) return api.sendMessage(getText('incorrectSyntax', prefix, 'wake'), threadID, messageID);
 			var getTime = moment().utcOffset("+07:00").format();
 			var time = getTime.slice(getTime.indexOf("T") + 1, getTime.indexOf("+"));
 			var wakeTime = getTime.replace(time.split(":")[0] + ":", contentHour + ":").replace(time.split(":")[1] + ":", contentMinute + ":");
 			for (var i = 6; i > 0; i--) sleepTime.push(moment(wakeTime).utcOffset("+07:00").subtract(90 * i + 15, 'm').format("HH:mm"));
-			return api.sendMessage("Nếu bạn muốn thức dậy vào lúc " + content + ", những thời gian hoàn hảo nhất để đi ngủ là:\n" + sleepTime.join(', ') + "\nFact: Thời gian để bạn vào giấc ngủ từ lúc nhắm mắt là 15-20 phút", threadID, messageID);
+			return api.sendMessage(getText('wake', content, sleepTime.join(', ')), threadID, messageID);
 		}
 
 		//prefix
-		if (contentMessage == 'prefix') return api.sendMessage(`Prefix là: ${prefix}`, threadID, messageID);
+		if (contentMessage == 'prefix') return api.sendMessage(getText('prefix', prefix), threadID, messageID);
 
 		//credits
-		if (contentMessage == "credits") return api.sendMessage("Project Mirai được thực hiện bởi:\nSpermLord: https://fb.me/MyNameIsSpermLord\nCatalizCS: https://fb.me/Cataliz2k\nFull source code at: https://github.com/roxtigger2003/mirai", threadID, messageID);
+		if (contentMessage == "credits") return api.sendMessage(getText('credit'), threadID, messageID);
 
 		//random name
 		if (contentMessage.indexOf(`${prefix}rname`) == 0) return request(`https://uzby.com/api.php?min=4&max=12`, (err, response, body) => api.changeNickname(`${body}`, threadID, senderID));
 
+		//sim on
+		if (contentMessage == `${prefix}sim on`) {
+			__GLOBAL.simOn.push(threadID);
+			return api.sendMessage(getText('simOn'), threadID);
+		}
+
+		//sim off
+		if (contentMessage == `${prefix}sim off`) {
+			__GLOBAL.simOn.splice(__GLOBAL.simOn.indexOf(threadID), 1);
+			return api.sendMessage(getText('simOff'), threadID);
+		}
+
 		//simsimi
-		if (contentMessage.indexOf(`${prefix}sim`) == 0) return request(`https://simsumi.herokuapp.com/api?text=${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}&lang=vi`, (err, response, body) => api.sendMessage((JSON.parse(body).success != '') ? JSON.parse(body).success : 'Không có câu trả nời nào.', threadID, messageID));
+		if (contentMessage.indexOf(`${prefix}sim`) == 0) return request(`http://195.201.173.201:26880/sim/${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}`, (err, response, body) => api.sendMessage((JSON.parse(body).out != '') ? JSON.parse(body).out : getText('noAnswer'), threadID, messageID));
 
 		//mit
 		if (contentMessage.indexOf(`${prefix}mit`) == 0) return request(`https://kakko.pandorabots.com/pandora/talk-xml?input=${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}&botid=9fa364f2fe345a10&custid=${senderID}`, (err, response, body) => api.sendMessage((/<that>(.*?)<\/that>/.exec(body)[1]), threadID, messageID));
 
+		//penis
+		if (contentMessage.indexOf(`${prefix}penis`) == 0) return api.sendMessage(`8${'='.repeat(Math.floor(Math.random() * 10))}D`, threadID, messageID);
+
+		//reminder
+		if (contentMessage.indexOf(`${prefix}reminder`) == 0) {
+			const time = contentMessage.slice(prefix.length + 9, contentMessage.length);
+			if (isNaN(time)) return api.sendMessage(getText('isNaN'), threadID, messageID);
+			const display = time > 59 ? getText('timeMin', time / 60) : getText('timeSec', time);
+			api.sendMessage(getText('remindAfter', display), threadID, messageID);
+			await new Promise(resolve => setTimeout(resolve, time * 1000));
+			api.sendMessage({
+				body: getText('remindUser') + getText('remind'),
+				mentions: [{
+					tag: getText('remindUser'),
+					id: senderID
+				}]
+			}, threadID, messageID);
+		}
+
 		//random màu cho theme chat
 		if (contentMessage == `${prefix}randomcolor`) {
 			var color = ['196241301102133', '169463077092846', '2442142322678320', '234137870477637', '980963458735625', '175615189761153', '2136751179887052', '2058653964378557', '2129984390566328', '174636906462322', '1928399724138152', '417639218648241', '930060997172551', '164535220883264', '370940413392601', '205488546921017', '809305022860427'];
-			return api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID, (err) => (err) ? api.sendMessage('Đã có lỗi không mong muốn đã xảy ra', threadID, messageID) : '');
+			return api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID, (err) => (err) ? api.sendMessage(getText('error'), threadID, messageID) : '');
 		}
 
 		//poll
@@ -809,35 +980,37 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var object = {};
 			if (option.length == 1 && option[0].includes(' |')) option[0] = option[0].replace(' |', '');
 			for (var i = 0; i < option.length; i++) object[option[i]] = false;
-			return api.createPoll(title, threadID, object, (err) => (err) ? api.sendMessage("Có lỗi xảy ra vui lòng thử lại", threadID, messageID) : '');
+			return api.createPoll(title, threadID, object, (err) => (err) ? api.sendMessage(getText('error'), threadID, messageID) : '');
 		}
 
 		//rainbow
 		if (contentMessage.indexOf(`${prefix}rainbow`) == 0) {
 			var value = contentMessage.slice(prefix.length + 8, contentMessage.length);
-			if (isNaN(value)) return api.sendMessage('Dữ liệu không phải là một con số', threadID, messageID);
-			if (value > 50) return api.sendMessage('Dữ liệu phải nhỏ hơn 50!', threadID, messageID);
+			if (isNaN(value)) return api.sendMessage(getText('isNaN'), threadID, messageID);
+			if (value > 10000) return api.sendMessage(getText('lessThan', '10000'), threadID, messageID);
 			var color = ['196241301102133', '169463077092846', '2442142322678320', '234137870477637', '980963458735625', '175615189761153', '2136751179887052', '2058653964378557', '2129984390566328', '174636906462322', '1928399724138152', '417639218648241', '930060997172551', '164535220883264', '370940413392601', '205488546921017', '809305022860427'];
-			for (var i = 0; i < value; i++) api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID);
+			for (var i = 0; i < value; i++) {
+				api.changeThreadColor(color[Math.floor(Math.random() * color.length)], threadID)
+				await new Promise(resolve => setTimeout(resolve, 1000));
+			}
 			return;
 		}
 
 		//giveaway
 		if (contentMessage.indexOf(`${prefix}ga`) == 0) {
 			var content = contentMessage.slice(prefix.length + 3, contentMessage.length);
-			api.getThreadInfo(threadID, function(err, info) {
-				if (err) return api.sendMessage(`Đã xảy ra lỗi không mong muốn`, threadID, messageID);
+			api.getThreadInfo(threadID, async function (err, info) {
+				if (err) return api.sendMessage(getText('error'), threadID, messageID);
 				let winner = info.participantIDs[Math.floor(Math.random() * info.participantIDs.length)];
-				User.getName(winner).then((name) => {
-					if (err) return api.sendMessage(`Đã xảy ra lỗi không mong muốn`, threadID, messageID);
-					api.sendMessage({
-						body: `Yahoo ${name}, bạn đã thắng giveaway! phần thưởng là: "${content}" 🥳🥳.`,
-						mentions: [{
-							tag: name,
-							id: winner
-						}]
-					}, threadID, messageID);
-				});
+				let userInfo = await User.getInfo(winner);
+				var name = userInfo.name;
+				api.sendMessage({
+					body: getText('ga', name, content),
+					mentions: [{
+						tag: name,
+						id: winner
+					}]
+				}, threadID, messageID);
 			});
 			return;
 		}
@@ -845,21 +1018,15 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//thời tiết
 		if (contentMessage.indexOf(`${prefix}weather`) == 0) {
 			var city = contentMessage.slice(prefix.length + 8, contentMessage.length);
-			if (city.length == 0) return api.sendMessage(`Bạn chưa nhập địa điểm, hãy đọc hướng dẫn tại ${prefix}help weather!`,threadID, messageID);
-			request(encodeURI("https://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + openweather + "&units=metric&lang=vi"), (err, response, body) => {
+			if (city.length == 0) return api.sendMessage(getText('incorrectSyntax', prefix, 'weather'), threadID, messageID);
+			request(encodeURI("https://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + openweather + "&units=metric&lang=" + process.env.LANGUAGE), (err, response, body) => {
 				if (err) throw err;
 				var weatherData = JSON.parse(body);
-				if (weatherData.cod !== 200) return api.sendMessage(`Địa điểm ${city} không tồn tại!`, threadID, messageID);
+				if (weatherData.cod !== 200) return api.sendMessage(getText('locatNotFound', city), threadID, messageID);
 				var sunrise_date = moment.unix(weatherData.sys.sunrise).tz("Asia/Ho_Chi_Minh");
 				var sunset_date = moment.unix(weatherData.sys.sunset).tz("Asia/Ho_Chi_Minh");
 				api.sendMessage({
-					body: '🌡 Nhiệt độ: ' + weatherData.main.temp + '°C' + '\n' +
-								'🌡 Nhiệt độ cơ thể cảm nhận được: ' + weatherData.main.feels_like + '°C' + '\n' +
-								'☁️ Bầu trời hiện tại: ' + weatherData.weather[0].description + '\n' +
-								'💦 Độ ẩm: ' + weatherData.main.humidity + '%' + '\n' +
-								'💨 Tốc độ gió: ' + weatherData.wind.speed + 'km/h' + '\n' +
-								'🌅 Mặt trời mọc vào lúc: ' + sunrise_date.format('HH:mm:ss') + '\n' +
-								'🌄 Mặt trời lặn vào lúc: ' + sunset_date.format('HH:mm:ss') + '\n',
+					body: getText('locatData', weatherData.main.temp, weatherData.main.feels_like, weatherData.weather[0].description, weatherData.main.humidity, weatherData.wind.speed, sunrise_date.format('HH:mm:ss'), sunset_date.format('HH:mm:ss')),
 					location: {
 						latitude: weatherData.coord.lat,
 						longitude: weatherData.coord.lon,
@@ -873,10 +1040,10 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//say
 		if (contentMessage.indexOf(`${prefix}say`) == 0) {
 			var content = (event.type == "message_reply") ? event.messageReply.body : contentMessage.slice(prefix.length + 4, contentMessage.length);
-			var languageToSay = (["ru","en","ko","ja"].some(item => content.indexOf(item) == 0)) ? content.slice(0, content.indexOf(" ")) : 'vi';
+			var languageToSay = (["ru", "en", "ko", "ja"].some(item => content.indexOf(item) == 0)) ? content.slice(0, content.indexOf(" ")) : 'vi';
 			var msg = (languageToSay != 'vi') ? content.slice(3, contentMessage.length) : content;
-			var callback = () => api.sendMessage({body: "", attachment: fs.createReadStream(__dirname + "/src/say.mp3")}, threadID, () => fs.unlinkSync(__dirname + "/src/say.mp3"));
-			return request(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(msg)}&tl=${languageToSay}&client=tw-ob`).pipe(fs.createWriteStream(__dirname+'/src/say.mp3')).on('close',() => callback());
+			var callback = () => api.sendMessage({ body: "", attachment: fs.createReadStream(__dirname + "/src/say.mp3") }, threadID, () => fs.unlinkSync(__dirname + "/src/say.mp3"));
+			return request(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(msg)}&tl=${languageToSay}&client=tw-ob`).pipe(fs.createWriteStream(__dirname + '/src/say.mp3')).on('close', () => callback());
 		}
 
 		//cập nhật tình hình dịch
@@ -884,45 +1051,35 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return request("https://code.junookyo.xyz/api/ncov-moh/data.json", (err, response, body) => {
 				if (err) throw err;
 				var data = JSON.parse(body);
-				api.sendMessage(
-					"Thế giới:" +
-					"\n- Nhiễm: " + data.data.global.cases +
-					"\n- Chết: " + data.data.global.deaths +
-					"\n- Hồi phục: " + data.data.global.recovered +
-					"\nViệt Nam:" +
-					"\n- Nhiễm: " + data.data.vietnam.cases +
-					"\n- Chết: " + data.data.vietnam.deaths +
-					"\n- Phục hồi: " + data.data.vietnam.recovered,
-					threadID, messageID
-				);
+				api.sendMessage(getText('covid', data.data.global.cases, data.data.global.deaths, data.data.global.recovered, data.data.vietnam.cases, data.data.vietnam.deaths, data.data.vietnam.recovered), threadID, messageID);
 			});
 
 		//chọn
 		if (contentMessage.indexOf(`${prefix}choose`) == 0) {
 			var input = contentMessage.slice(prefix.length + 7, contentMessage.length).trim();
-			if (!input)return api.sendMessage(`Bạn không nhập đủ thông tin kìa :(`,threadID,messageID);
+			if (!input) return api.sendMessage(getText('incorrectSyntax', prefix, 'choose'), threadID, messageID);
 			var array = input.split(" | ");
-			return api.sendMessage(`Hmmmm, em sẽ chọn giúp cho là: ` + array[Math.floor(Math.random() * array.length)] + `.`,threadID,messageID);
+			return api.sendMessage(getText('choose', array[Math.floor(Math.random() * array.length)]), threadID, messageID);
 		}
 
 		//waifu
 		if (contentMessage == `${prefix}waifu`) {
 			var route = Math.round(Math.random() * 10);
-			if (route == 1 || route == 0 || route == 3) return api.sendMessage("Dạ em sẽ làm vợ anh <3\nYêu chàng nhiều <3", threadID, messageID);
-			else if (route == 2 || route > 4) return api.sendMessage("Chúng ta chỉ là bạn thôi :'(", threadID, messageID);
+			if (route == 1 || route == 0 || route == 3) return api.sendMessage(getText('waifu1'), threadID, messageID);
+			else if (route == 2 || route > 4) return api.sendMessage(getText('waifu2'), threadID, messageID);
 		}
 
 		//ramdom con số
 		if (contentMessage.indexOf(`${prefix}roll`) == 0) {
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
-			if (!content) return api.sendMessage(`uwu con số đẹp nhất em chọn được là: ${Math.floor(Math.random() * 99)}`, threadID, messageID);
+			if (!content) return api.sendMessage(getText('roll', Math.floor(Math.random() * 99)), threadID, messageID);
 			var splitContent = content.split(" ");
-			if (splitContent.length != 2) return api.sendMessage(`Sai format, bạn hãy đọc hướng dẫn trong ${prefix}help roll để biết thêm chi tiết.`, threadID, messageID)
+			if (splitContent.length != 2) return api.sendMessage(getText('incorrectSyntax', prefix, 'roll'), threadID, messageID)
 			var min = parseInt(splitContent[0]);
 			var max = parseInt(splitContent[1]);
-			if (isNaN(min) || isNaN(max)) return api.sendMessage('Dữ liệu bạn nhập không phải là một con số.', threadID, messageID);
-			if (min >= max) return api.sendMessage('Oops, số kết thúc của bạn lớn hơn hoặc bằng số bắt đầu.', threadID, messageID);
-			return api.sendMessage(`uwu con số đẹp nhất em chọn được là: ${Math.floor(Math.random() * (max - min + 1) + min)}`, threadID, messageID);
+			if (isNaN(min) || isNaN(max)) return api.sendMessage(getText('isNaN'), threadID, messageID);
+			if (min >= max) return api.sendMessage(getText('minGTEmax'), threadID, messageID);
+			return api.sendMessage(getText('roll', Math.floor(Math.random() * (max - min + 1) + min)), threadID, messageID);
 		}
 
 		//Khiến bot nhái lại tin nhắn bạn
@@ -932,26 +1089,35 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}rank`) == 0) {
 			const createCard = require("../controllers/rank_card.js");
 			var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
-			if (content.length == 0)
-				(async () => {
-					let name = await User.getName(senderID);
-					Rank.getPoint(senderID).then(point => createCard({ id: senderID, name, ...point })).then(path => api.sendMessage({attachment: fs.createReadStream(path)}, threadID, () => fs.unlinkSync(path), messageID))
-				})();
-			else if (content.indexOf("@") !== -1)
-				for (var i = 0; i < Object.keys(event.mentions).length; i++) {
-					let uid = Object.keys(event.mentions)[i];
-					(async () => {
-						let name = await User.getName(uid);
-						Rank.getPoint(uid).then(point => createCard({ id: uid, name, ...point })).then(path => api.sendMessage({attachment: fs.createReadStream(path)}, threadID, () => fs.unlinkSync(path), messageID))
-					})();
-				}
+			let all = await User.getUsers(['uid', 'point']);
+			all.sort((a, b) => {
+				if (a.point > b.point) return -1;
+				if (a.point < b.point) return 1;
+				if (a.uid > b.uid) return 1;
+				if (a.uid < b.uid) return -1;
+			});
+			if (!content) {
+				let rank = all.findIndex(item => item.uid == senderID) + 1;
+				let name = await User.getName(senderID);
+				if (rank == 0) api.sendMessage(getText('cantGetRank1'), threadID, messageID);
+				else Rank.getInfo(senderID).then(point => createCard({ id: senderID, name, rank, ...point })).then(path => api.sendMessage({ attachment: fs.createReadStream(path) }, threadID, () => fs.unlinkSync(path), messageID));
+			}
+			else {
+				let mentions = Object.keys(event.mentions);
+				mentions.forEach(i => {
+					let name = event.mentions[i].replace('@', '');
+					let rank = all.findIndex(item => item.uid == i) + 1;
+					if (rank == 0) api.sendMessage(getText('cantGetRank2', name), threadID, messageID);
+					else Rank.getInfo(i).then(point => createCard({ id: parseInt(i), name, rank, ...point })).then(path => api.sendMessage({ attachment: fs.createReadStream(path) }, threadID, () => fs.unlinkSync(path), messageID));
+				});
+			}
 			return;
 		}
 
-		//dịch ngôn ngữ
+		//dịch ngôn ngữ
 		if (contentMessage.indexOf(`${prefix}trans`) == 0) {
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
-			if (content.length == 0 && event.type != "message_reply") return api.sendMessage(`Bạn chưa nhập thông tin, vui lòng đọc ${prefix}help để biết thêm chi tiết!`, threadID,messageID);
+			if (content.length == 0 && event.type != "message_reply") return api.sendMessage(getText('incorrectSyntax', prefix, 'trans'), threadID, messageID);
 			var translateThis = content.slice(0, content.indexOf(" ->"));
 			var lang = content.substring(content.indexOf(" -> ") + 4);
 			if (event.type == "message_reply") {
@@ -964,27 +1130,27 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				lang = 'vi';
 			}
 			return request(encodeURI(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${translateThis}`), (err, response, body) => {
-				if (err) return api.sendMessage("Đã có lỗi xảy ra!", threadID, messageID)
+				if (err) return api.sendMessage(getText('error'), threadID, messageID)
 				var retrieve = JSON.parse(body);
 				var fromLang = retrieve[0][0][8][0][0][1].split("_")[0];
-				api.sendMessage(`Bản dịch: ${retrieve[0][0][0]}\n - được dịch từ ${fromLang} sang ${lang}`, threadID, messageID);
+				api.sendMessage(getText('translate', retrieve[0][0][0], fromLang, lang), threadID, messageID);
 			});
 		}
 
 		//uptime
 		if (contentMessage == `${prefix}uptime`) {
 			var time = process.uptime();
-			var hours = Math.floor(time / (60*60));
+			var hours = Math.floor(time / (60 * 60));
 			var minutes = Math.floor((time % (60 * 60)) / 60);
 			var seconds = Math.floor(time % 60);
-			return api.sendMessage("Bot đã hoạt động được " + hours + " giờ " + minutes + " phút " + seconds + " giây.", threadID, messageID);
+			return api.sendMessage(getText('uptime', hours, minutes, seconds), threadID, messageID);
 		}
 
 		//unsend message
 		if (contentMessage.indexOf(`${prefix}gỡ`) == 0) {
-			if (event.messageReply.senderID != api.getCurrentUserID()) return api.sendMessage("Không thể gỡ tin nhắn của người khác", threadID, messageID);
-			if (event.type != "message_reply") return api.sendMessage("Phản hồi tin nhắn cần gỡ", threadID, messageID);
-			return api.unsendMessage(event.messageReply.messageID, err => (err) ? api.sendMessage("Không thể gỡ tin nhắn này vì đã quá 10 phút!", threadID, messageID) : '');
+			if (event.messageReply.senderID != api.getCurrentUserID()) return api.sendMessage(getText('unsendErr1'), threadID, messageID);
+			if (event.type != "message_reply") return api.sendMessage(getText('unsendErr2'), threadID, messageID);
+			return api.unsendMessage(event.messageReply.messageID, err => (err) ? api.sendMessage(getText('error'), threadID, messageID) : '');
 		}
 
 		//get uid
@@ -1006,14 +1172,14 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				url = 'https://en.wikipedia.org/w/api.php';
 				content = contentMessage.slice(prefix.length + 9, contentMessage.length);
 			}
-			if (!content) return api.sendMessage("Nhập thứ cần tìm!", threadID, messageID);
-			return wiki({apiUrl: url}).page(content).catch((err) => api.sendMessage("Không tìm thấy " + content, threadID, messageID)).then(page => (typeof page != 'undefined') ? Promise.resolve(page.summary()).then(val => api.sendMessage(val, threadID, messageID)) : '');
+			if (!content) return api.sendMessage(getText('wikiErr1'), threadID, messageID);
+			return wiki({ apiUrl: url }).page(content).catch(() => api.sendMessage(getText('wikiErr2', content), threadID, messageID)).then(page => (typeof page != 'undefined') ? Promise.resolve(page.summary()).then(val => api.sendMessage(val, threadID, messageID)) : '');
 		}
 
 		//ping
-		if (contentMessage == `${prefix}ping`)
+		if (contentMessage.indexOf(`${prefix}ping`) == 0)
 			return api.getThreadInfo(threadID, (err, info) => {
-				if (err) return api.sendMessage('Đã có lỗi xảy ra!.', threadID, messageID);
+				if (err) return api.sendMessage(getText('error'), threadID, messageID);
 				var ids = info.participantIDs;
 				ids.splice(ids.indexOf(api.getCurrentUserID()), 1);
 				var body = '@everyone', mentions = [];
@@ -1025,7 +1191,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 						fromIndex: i
 					});
 				}
-				api.sendMessage({body, mentions}, threadID, messageID);
+				api.sendMessage({ body, mentions }, threadID, messageID);
 			});
 
 		//look earth
@@ -1033,7 +1199,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return request(`https://api.nasa.gov/EPIC/api/natural/images?api_key=DEMO_KEY`, (err, response, body) => {
 				if (err) throw err;
 				var jsonData = JSON.parse(body);
-				var randomNumber = Math.floor(Math.random() * ((jsonData.length -1) + 1));
+				var randomNumber = Math.floor(Math.random() * ((jsonData.length - 1) + 1));
 				var image_name = jsonData[randomNumber].image
 				var date = jsonData[randomNumber].date;
 				var date_split = date.split("-")
@@ -1042,7 +1208,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var day_and_time = date_split[2];
 				var sliced_date = day_and_time.slice(0, 2);
 				var image_link = `https://epic.gsfc.nasa.gov/archive/natural/${year}/${month}/${sliced_date}/png/` + image_name + ".png";
-				let callback = function() {
+				let callback = function () {
 					api.sendMessage({
 						body: `${jsonData[randomNumber].caption} on ${date}`,
 						attachment: fs.createReadStream(__dirname + `/src/randompic.png`)
@@ -1056,7 +1222,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return request(`http://api.open-notify.org/iss-now.json`, (err, response, body) => {
 				if (err) throw err;
 				var jsonData = JSON.parse(body);
-				api.sendMessage(`Vị trí hiện tại của International Space Station 🌌🌠🌃\nVĩ độ: ${jsonData.iss_position.latitude} | Kinh độ: ${jsonData.iss_position.longitude}`, threadID, messageID);
+				api.sendMessage(getText('iss', jsonData.iss_position.latitude, jsonData.iss_position.longitude), threadID, messageID);
 			});
 		}
 
@@ -1065,7 +1231,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return request(`https://api.nasa.gov/neo/rest/v1/feed/today?detailed=true&api_key=DEMO_KEY`, (err, response, body) => {
 				if (err) throw err;
 				var jsonData = JSON.parse(body);
-				api.sendMessage(`Hiện tại đang có tổng cộng: ${jsonData.element_count} vật thể đang ở gần trái đất ngay lúc này!`, threadID, messageID);
+				api.sendMessage(getText('neo', jsonData.element_count), threadID, messageID);
 			});
 		}
 
@@ -1074,33 +1240,32 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return request(`https://api.spacexdata.com/v3/launches/latest`, (err, response, body) => {
 				if (err) throw err;
 				var data = JSON.parse(body);
-				api.sendMessage(
-					"Thông tin đợt phóng mới nhất của SpaceX:" +
-					"\n- Mission: " + data.mission_name +
-					"\n- Năm phóng: " + data.launch_year +
-					"\n- Thời gian phóng: " + data.launch_date_local +
-					"\n- Tên lửa: " + data.rocket.rocket_name +
-					"\n- Link Youtube: " + data.links.video_link,
-				threadID, messageID);
+				api.sendMessage(getText('spacex', data.mission_name, data.launch_year, data.launch_date_local, data.rocket.rocket_name, data.links.video_link), threadID, messageID);
 			});
 		}
 
 		//afk
 		if (contentMessage.indexOf(`${prefix}afk`) == 0) {
-			(async () => {
-				var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
-				if (content) {
-					await User.updateReason(senderID, content);
-					api.sendMessage(`🛠 | Bạn đã bật mode afk với lý do: ${content}`, threadID, messageID);
-				}
-				else {
-					await User.updateReason(senderID, 'none');
-					api.sendMessage(`🛠 | Bạn đã bật mode afk`, threadID, messageID);
-				}
-				await User.afk(senderID);
-				__GLOBAL.afkUser.push(parseInt(senderID));
-			})();
+			var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
+			if (content) {
+				await User.updateReason(senderID, content);
+				api.sendMessage('🛠 | ' + getText('afkWithReason', content), threadID, messageID);
+			}
+			else {
+				await User.updateReason(senderID, 'none');
+				api.sendMessage('🛠 | ' + getText('afk'), threadID, messageID);
+			}
+			await User.afk(senderID);
+			__GLOBAL.afkUser.push(parseInt(senderID));
 			return;
+		}
+
+		/* ==================== Game Commands ==================== */
+
+		//osu!
+		if (contentMessage.indexOf(`osu!`) == 0) {
+			if (!contentMessage.slice(5, contentMessage.length)) return api.sendMessage(getText('osuErr'), threadID, messageID);
+			return request(`http://lemmmy.pw/osusig/sig.php?colour=hex8866ee&uname=${contentMessage.slice(5, contentMessage.length)}&pp=1&countryrank&rankedscore&onlineindicator=undefined&xpbar&xpbarhex`).pipe(fs.createWriteStream(__dirname + `/src/osu!.png`)).on("close", () => api.sendMessage({ attachment: fs.createReadStream(__dirname + `/src/osu!.png`) }, threadID, () => fs.unlinkSync(__dirname + `/src/osu!.png`), messageID))
 		}
 
 		/* ==================== Study Commands ==================== */
@@ -1109,45 +1274,68 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		if (contentMessage.indexOf(`${prefix}math`) == 0) {
 			const wolfram = "http://api.wolframalpha.com/v2/result?appid=" + wolfarm + "&i=";
 			var m = contentMessage.slice(prefix.length + 5, contentMessage.length);
-			request(wolfram + encodeURIComponent(m), function(err, response, body) {
-				if (body.toString() === "Wolfram|Alpha did not understand your input") return api.sendMessage("Tôi chả hiểu bạn đang đưa thứ gì cho tôi nữa", threadID, messageID);
-				else if (body.toString() === "Wolfram|Alpha did not understand your input") return api.sendMessage("Tôi không hiểu câu hỏi của bạn", threadID, messageID);
-				else if (body.toString() === "My name is Wolfram Alpha.") return api.sendMessage("Tên tôi là Mirai", threadID, messageID);
-				else if (body.toString() === "I was created by Stephen Wolfram and his team.") return api.sendMessage("Tôi được làm ra bởi CatalizCS và SpermLord", threadID, messageID);
-				else if (body.toString() === "I am not programmed to respond to this dialect of English.") return api.sendMessage("Tôi không được lập trình để nói những thứ như này", threadID, messageID);
-				else if (body.toString() === "StringJoin(CalculateParse`Content`Calculate`InternetData(Automatic, Name))") return api.sendMessage("Tôi không biết phải trả lời như nào", threadID, messageID);
+			request(wolfram + encodeURIComponent(m), function (err, response, body) {
+				if (body.toString() === "Wolfram|Alpha did not understand your input") return api.sendMessage(getText('didntUnderstand'), threadID, messageID);
+				else if (body.toString() === "My name is Wolfram Alpha.") return api.sendMessage(getText('mirai'), threadID, messageID);
+				else if (body.toString() === "I was created by Stephen Wolfram and his team.") return api.sendMessage(getText('created'), threadID, messageID);
+				else if (body.toString() === "StringJoin(CalculateParse`Content`Calculate`InternetData(Automatic, Name))") return api.sendMessage(getText('noAnswer'), threadID, messageID);
 				else return api.sendMessage(body, threadID, messageID);
 			});
 		}
 
 		//cân bằng phương trình hóa học
 		if (contentMessage.indexOf(`${prefix}chemeb`) == 0) {
-			console.log = () => {};
+			console.log = () => { };
 			const chemeb = require('chem-eb');
 			if (event.type == "message_reply") {
 				var msg = event.messageReply.body;
-				if (msg.includes('(') && msg.includes(')')) return api.sendMessage('Hiện tại không hỗ trợ phương trình tối giản. Hãy chuyển (XY)z về dạng XzYz.', threadID, messageID);
+				if (msg.includes('(') && msg.includes(')')) return api.sendMessage(getText('notSupportXYz'), threadID, messageID);
 				var balanced = chemeb(msg);
 				return api.sendMessage(`✅ ${balanced.outChem}`, threadID, messageID);
 			}
 			else {
 				var msg = contentMessage.slice(prefix.length + 7, contentMessage.length);
-				if (msg.includes('(') && msg.includes(')')) return api.sendMessage('Hiện tại không hỗ trợ phương trình tối giản. Hãy chuyển (XY)z về dạng XzYz.', threadID, messageID);
+				if (msg.includes('(') && msg.includes(')')) return api.sendMessage(getText('notSupportXYz'), threadID, messageID);
 				var balanced = chemeb(msg);
 				return api.sendMessage(`✅ ${balanced.outChem}`, threadID, messageID);
 			}
 		}
 
-	/* ==================== NSFW Commands ==================== */
+		//do math
+		if (contentMessage.indexOf(`${prefix}domath`) == 0) {
+			const content = contentMessage.slice(prefix.length + 7, contentMessage.length);
+			let difficulty, answer, value1, value2;
+			const difficulties = ['baby', 'easy', 'medium', 'hard', 'extreme', 'impossible'];
+			(difficulties.some(item => content == item)) ? difficulty = content : difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
+			const operations = ['+', '-', '*'];
+			const maxValues = { baby: 10, easy: 50, medium: 100, hard: 500, extreme: 1000, impossible: Number.MAX_SAFE_INTEGER };
+			const operation = operations[Math.floor(Math.random() * operations.length)];
+			value1 = Math.floor(Math.random() * maxValues[difficulty] - 1) + 1;
+			value2 = Math.floor(Math.random() * maxValues[difficulty] - 1) + 1;
+			switch (operation) {
+				case '+':
+					answer = value1 + value2;
+					break;
+				case '-':
+					answer = value1 - value2;
+					break;
+				case '*':
+					answer = value1 * value2;
+					break;
+			}
+			return api.sendMessage(getText('15secs', `${value1} ${operation} ${value2} = ?`), threadID, (err, info) => __GLOBAL.reply.push({ type: "domath", messageID: info.messageID, target: parseInt(threadID), author: senderID, answer }), messageID);
+		}
+
+		/* ==================== NSFW Commands ==================== */
 
 		//nhentai search
 		if (contentMessage.indexOf(`${prefix}nhentai`) == 0) {
-			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage(getText('offNSFW'), threadID, messageID);
 			let id = contentMessage.slice(prefix.length + 8, contentMessage.length).trim();
-			if (!id) return api.sendMessage(`Code lý tưởng để bắn tung toé là: ${Math.floor(Math.random() * 99999)}`, threadID, messageID);
+			if (!id) return api.sendMessage(getText('idealCode', Math.floor(Math.random() * 99999)), threadID, messageID);
 			return request(`https://nhentai.net/api/gallery/${id}`, (error, response, body) => {
 				var codeData = JSON.parse(body);
-				if (codeData.error == true) return api.sendMessage("Không tìm thấy truyện này", threadID, messageID);
+				if (codeData.error == true) return api.sendMessage(getText('cantFindHentai'), threadID, messageID);
 				let title = codeData.title.pretty;
 				let tagList = [];
 				let artistList = [];
@@ -1157,40 +1345,30 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				var artists = artistList.join(', ');
 				var characters = characterList.join(', ');
 				if (characters == '') characters = 'Original';
-				api.sendMessage("Tiêu đề: " + title, threadID, () => {
-					api.sendMessage("Tác giả: " + artists, threadID, () => {
-						api.sendMessage("Nhân vật: " + characters, threadID, () => {
-							api.sendMessage("Tags: " + tags, threadID, () => {
-								api.sendMessage("Link: https://nhentai.net/g/" + id, threadID);
-							});
-						});
-					});
-				}, messageID);
+				api.sendMessage(getText('codeInfo', title, artists, characters, tags, 'https://nhentai.net/g/' + id), threadID, messageID);
 			});
 		}
 
 		//hentaivn
 		if (contentMessage.indexOf(`${prefix}hentaivn`) == 0) {
-			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage(getText('offNSFW'), threadID, messageID);
 			const cheerio = require('cheerio');
 			var id = contentMessage.slice(prefix.length + 9, contentMessage.length);
-			if (!id) return api.sendMessage("Nhập id!", threadID, messageID);
-			if (!id) return api.sendMessage(`Code lý tưởng để bắn tung toé là: ${Math.floor(Math.random() * 21553)}`, threadID, messageID);
+			if (!id) return api.sendMessage(getText('idealCode', Math.floor(Math.random() * 21553)), threadID, messageID);
 			axios.get(`https://hentaivn.net/id${id}`).then((response) => {
 				if (response.status == 200) {
 					const html = response.data;
 					const $ = cheerio.load(html);
 					var getContainer = $('div.container');
 					var getURL = getContainer.find('form').attr('action');
-					if (getURL == `https://hentaivn.net/${id}-doc-truyen-.html`) return api.sendMessage("Không tìm thấy truyện này", threadID, messageID);
+					if (getURL == `https://hentaivn.net/${id}-doc-truyen-.html`) return api.sendMessage(getText('cantFindHentai'), threadID, messageID);
 					axios.get(getURL).then((response) => {
 						if (response.status == 200) {
 							const html = response.data;
 							const $ = cheerio.load(html);
 							var getInfo = $('div.container div.main div.page-info');
-							var getUpload = $('div.container div.main div.page-uploader');
 							var getName = getInfo.find('h1').find('a').text();
-							var getTags = getInfo.find('a.tag').contents().map(function() {
+							var getTags = getInfo.find('a.tag').contents().map(function () {
 								return (this.type === 'text') ? $(this).text() + '' : '';
 							}).get().join(', ');
 							var getArtist = getInfo.find('a[href^="/tacgia="]').contents().map(function () {
@@ -1200,19 +1378,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 								return (this.type === 'text') ? $(this).text() + '' : '';
 							}).get().join(', ');
 							if (getChar == '') getChar = 'Original';
-							var getLikes = getUpload.find('div.but_like').text();
-							var getDislikes = getUpload.find('div.but_unlike').text();
-							return api.sendMessage("Tên: " + getName.substring(1), threadID, () => {
-								api.sendMessage("Tác giả: " + getArtist, threadID, () => {
-									api.sendMessage("Nhân vật: " + getChar, threadID, () => {
-										api.sendMessage("Tags: " + getTags, threadID, () => {
-											api.sendMessage("Số Like: " + getLikes.substring(1) + "\nSố Dislike: " + getDislikes.substring(1), threadID, () => {
-												api.sendMessage(getURL.slice(0, 17) + " " + getURL.slice(17), threadID);
-											});
-										});
-									});
-								});
-							}, messageID);
+							return api.sendMessage(getText('codeInfo', getName.substring(1), getArtist, getChar, getTags, getURL.slice(0, 17) + " " + getURL.slice(17)), threadID, messageID);
 						}
 					}, (error) => console.log(error));
 				}
@@ -1222,13 +1388,10 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//porn pics
 		if (contentMessage.indexOf(`${prefix}porn`) == 0) {
-			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage(getText('offNSFW'), threadID, messageID);
 			return Nsfw.pornUseLeft(senderID).then(useLeft => {
-				if (useLeft == 0) return api.sendMessage(`Bạn đã hết số lần dùng ${prefix}porn.\nHãy nâng cấp lên Hạng NSFW cao hơn hoặc chờ đến ngày mai.`, threadID, messageID);
+				if (useLeft == 0) return api.sendMessage(getText('exceededNSFW', prefix, 'porn'), threadID, messageID);
 				const cheerio = require('cheerio');
-				const ffmpeg = require("fluent-ffmpeg");
-				const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-				ffmpeg.setFfmpegPath(ffmpegPath);
 				var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
 				var album = {
 					'asian': "9057591",
@@ -1248,7 +1411,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					let allTags = [];
 					Object.keys(album).forEach((item) => allTags.push(item));
 					var pornTags = allTags.join(', ');
-					return api.sendMessage('=== Tất cả các tag Porn ===\n' + pornTags, threadID, messageID);
+					return api.sendMessage(getText('allTags', 'Porn', pornTags), threadID, messageID);
 				}
 				axios.get(`https://www.pornhub.com/album/${album[content]}`).then((response) => {
 					if (useLeft != -1) Nsfw.subtractPorn(senderID);
@@ -1273,33 +1436,28 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 									let mp4URL = video.find('source').attr('src');
 									let ext = mp4URL.substring(mp4URL.lastIndexOf('.') + 1);
 									request(mp4URL).pipe(fs.createWriteStream(__dirname + `/src/porn.${ext}`)).on('close', () => {
-										ffmpeg().input(__dirname + `/src/porn.${ext}`).toFormat("gif").pipe(fs.createWriteStream(__dirname + "/src/porn.gif")).on("close", () => {
-											return api.sendMessage({attachment: fs.createReadStream(__dirname + `/src/porn.gif`)}, threadID, () => {
-												fs.unlinkSync(__dirname + `/src/porn.gif`);
-												fs.unlinkSync(__dirname + `/src/porn.${ext}`);
-											}, messageID);
-										});
+										return api.sendMessage({ attachment: fs.createReadStream(__dirname + `/src/porn.${ext}`) }, threadID, () => fs.unlinkSync(__dirname + `/src/porn.${ext}`), messageID);
 									});
 								}
 								else {
 									let image = $('div#photoWrapper');
 									let imgURL = image.find('img').attr('src');
 									let ext = imgURL.substring(imgURL.lastIndexOf('.') + 1);
-									return request(imgURL).pipe(fs.createWriteStream(__dirname + `/src/porn.${ext}`)).on('close', () => api.sendMessage({attachment: fs.createReadStream(__dirname + `/src/porn.${ext}`)}, threadID, () => fs.unlinkSync(__dirname + `/src/porn.${ext}`), messageID));
+									return request(imgURL).pipe(fs.createWriteStream(__dirname + `/src/porn.${ext}`)).on('close', () => api.sendMessage({ attachment: fs.createReadStream(__dirname + `/src/porn.${ext}`) }, threadID, () => fs.unlinkSync(__dirname + `/src/porn.${ext}`), messageID));
 								}
 							}
 						}, (error) => console.log(error));
 					}
-					else return api.sendMessage("Đã xảy ra lỗi!", threadID, messageID);
+					else return api.sendMessage(getText('error'), threadID, messageID);
 				}, (error) => console.log(error));
 			});
 		}
 
 		//hentai
 		if (contentMessage.indexOf(`${prefix}hentai`) == 0) {
-			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage(getText('offNSFW'), threadID, messageID);
 			return Nsfw.hentaiUseLeft(senderID).then(useLeft => {
-				if (useLeft == 0) return api.sendMessage(`Bạn đã hết số lần dùng ${prefix}hentai.\nHãy nâng cấp lên Hạng NSFW cao hơn hoặc chờ đến ngày mai.`, threadID, messageID);
+				if (useLeft == 0) return api.sendMessage(getText('exceededNSFW', prefix, 'hentai'), threadID, messageID);
 				var content = contentMessage.slice(prefix.length + 7, contentMessage.length);
 				var jsonData = fs.readFileSync(__dirname + "/src/anime.json");
 				var data = JSON.parse(jsonData).nsfw;
@@ -1307,92 +1465,86 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					let nsfwList = [];
 					Object.keys(data).forEach(endpoint => nsfwList.push(endpoint));
 					let nsfwTags = nsfwList.join(', ');
-					return api.sendMessage('=== Tất cả các tag Hentai ===\n' + nsfwTags, threadID, messageID);
+					return api.sendMessage(getText('allTags', 'Hentai', nsfwTags), threadID, messageID);
 				}
 				request(data[content], (error, response, body) => {
 					if (useLeft != -1) Nsfw.subtractHentai(senderID);
 					let picData = JSON.parse(body);
-					let getURL = picData.data.response.url;
+					let getURL = "";
+					(!picData.data) ? getURL = picData.url : getURL = picData.data.response.url;
 					let ext = getURL.substring(getURL.lastIndexOf(".") + 1);
-					request(getURL).pipe(fs.createWriteStream(__dirname + `/src/hentai.${ext}`)).on("close", () => api.sendMessage({attachment: fs.createReadStream(__dirname + `/src/hentai.${ext}`)}, threadID, () => fs.unlinkSync(__dirname + `/src/hentai.${ext}`), messageID));
+					request(getURL).pipe(fs.createWriteStream(__dirname + `/src/hentai.${ext}`)).on("close", () => api.sendMessage({ attachment: fs.createReadStream(__dirname + `/src/hentai.${ext}`) }, threadID, () => fs.unlinkSync(__dirname + `/src/hentai.${ext}`), messageID));
 				});
 			});
 		}
 
 		//get nsfw tier
 		if (contentMessage == `${prefix}mynsfw`) {
-			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
-			(async () => {
-				let tier = await Nsfw.getNSFW(senderID);
-				let hentai = await Nsfw.hentaiUseLeft(senderID);
-				let porn = await Nsfw.pornUseLeft(senderID);
-				if (tier == -1) api.sendMessage('Bạn đang ở God Mode.\nBạn sẽ không bị giới hạn số lần dùng lệnh NSFW.', threadID, messageID);
-				else api.sendMessage(`Hạng NSFW của bạn là ${tier}.\nSố lần sử dụng ${prefix}porn còn lại: ${porn}.\nSố lần sử dụng ${prefix}hentai còn lại: ${hentai}.`, threadID, messageID);
-			})();
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage(getText('offNSFW'), threadID, messageID);
+			let { porn, hentai, tier } = await Nsfw.getNSFW(senderID);
+			if (tier == -1) api.sendMessage(getText('godmodeNSFW'), threadID, messageID);
+			else api.sendMessage(getText('myNSFW', tier, prefix, porn, hentai), threadID, messageID);
 			return;
 		}
 
 		//buy nsfw tier
 		if (contentMessage == `${prefix}buynsfw`) {
-			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
-			(async () => {
-				let tier = await Nsfw.getNSFW(senderID);
-				if (tier == -1) api.sendMessage('Bạn đang ở God Mode nên sẽ không thể mua.', threadID, messageID);
-				else {
-					let buy = await Nsfw.buyNSFW(senderID);
-					if (buy == false) api.sendMessage('Đã có lỗi xảy ra!', threadID, messageID);
-					else api.sendMessage(buy.toString(), threadID, messageID);
-				}
-			})();
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage(getText('offNSFW'), threadID, messageID);
+			let { tier } = await Nsfw.getNSFW(senderID);
+			if (tier == -1) api.sendMessage(getText('cantBuyNSFW'), threadID, messageID);
+			else {
+				let buy = await Nsfw.buyNSFW(senderID);
+				if (buy == false) api.sendMessage(getText('error'), threadID, messageID);
+				else api.sendMessage(buy.toString(), threadID, messageID);
+			}
 			return;
 		}
 
 		//set nsfw tier
 		if (contentMessage.indexOf(`${prefix}setnsfw`) == 0 && admins.includes(senderID)) {
-			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage("Nhóm này đang bị tắt NSFW!", threadID, messageID);
+			if (__GLOBAL.NSFWBlocked.includes(threadID)) return api.sendMessage(getText('offNSFW'), threadID, messageID);
 			var mention = Object.keys(event.mentions)[0];
 			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
 			var sender = content.slice(0, content.lastIndexOf(" "));
 			var tierSet = content.substring(content.lastIndexOf(" ") + 1);
-			return Economy.getMoney(senderID).then((moneydb) => {
-				if (isNaN(tierSet)) return api.sendMessage('Số hạng NSFW cần set của bạn không phải là 1 con số!', threadID, messageID);
-				if (tierSet > 5 || tierSet < -1) return api.sendMessage('Hạng NSFW không được dưới -1 và vượt quá 5', threadID, messageID);
-				if (tierSet == -1 && nsfwGodMode == false) return api.sendMessage('Bạn chưa bật NSFW God Mode trong config.', threadID, messageID);
-				if (!mention && sender == 'me' && tierSet != -1) return api.sendMessage("Đã sửa hạng NSFW của bản thân thành " + tierSet, threadID, () => Economy.setNSFW(senderID, parseInt(tierSet)), messageID);
-				if (!mention && sender == 'me' && tierSet == -1) return api.sendMessage("Đã bật God Mode cho bản thân!\nBạn sẽ không bị trừ số lần sử dụng lệnh NSFW.", threadID, () => Economy.setNSFW(senderID, parseInt(tierSet)), messageID);
-				if (sender != 'me' && tierSet != -1)
-					api.sendMessage({
-						body: `Bạn đã sửa hạng NSFW của ${event.mentions[mention].replace("@", "")} thành ${tierSet}.`,
-						mentions: [{
-							tag: event.mentions[mention].replace("@", ""),
-							id: mention
-						}]
-					}, threadID, () => Nsfw.setNSFW(mention, parseInt(tierSet)), messageID);
-				if (senderID != 'me' && tierSet == -1)
-					api.sendMessage({
-						body: `Bạn đã bật God Mode cho ${event.mentions[mention].replace("@", "")}!\nGiờ người này có thể dùng lệnh NSFW mà không bị giới hạn!`,
-						mentions: [{
-							tag: event.mentions[mention].replace("@", ""),
-							id: mention
-						}]
-					}, threadID, () => Nsfw.setNSFW(mention, parseInt(tierSet)), messageID);
-			});
+			if (isNaN(tierSet)) return api.sendMessage(getText('isNaN'), threadID, messageID);
+			if (tierSet > 5 || tierSet < -1) return api.sendMessage(getText('nsfwTierLimit'), threadID, messageID);
+			if (tierSet == -1 && nsfwGodMode == false) return api.sendMessage(getText('gmConfig'), threadID, messageID);
+			if (!mention && sender == 'me' && tierSet != -1) return api.sendMessage(getText('setNSFWMe', tierSet), threadID, () => Nsfw.setNSFW(senderID, parseInt(tierSet)), messageID);
+			if (!mention && sender == 'me' && tierSet == -1) return api.sendMessage(getText('godmodeNSFW'), threadID, () => Nsfw.setNSFW(senderID, parseInt(tierSet)), messageID);
+			if (sender != 'me' && tierSet != -1)
+				api.sendMessage({
+					body: getText('setNSFWUser', event.mentions[mention].replace("@", ""), tierSet),
+					mentions: [{
+						tag: event.mentions[mention].replace("@", ""),
+						id: mention
+					}]
+				}, threadID, () => Nsfw.setNSFW(mention, parseInt(tierSet)), messageID);
+			if (senderID != 'me' && tierSet == -1)
+				api.sendMessage({
+					body: getText('setNSFWgm', event.mentions[mention].replace("@", "")),
+					mentions: [{
+						tag: event.mentions[mention].replace("@", ""),
+						id: mention
+					}]
+				}, threadID, () => Nsfw.setNSFW(mention, parseInt(tierSet)), messageID);
+			return;
 		}
 
 		/* ==================== Economy and Minigame Commands ==================== */
 
 		//coinflip
-		if (contentMessage.indexOf(`${prefix}coinflip`) == 0) return (Math.random() > 0.5) ? api.sendMessage("Mặt ngửa!", threadID, messageID) : api.sendMessage("Mặt sấp!", threadID, messageID);
+		if (contentMessage.indexOf(`${prefix}coinflip`) == 0) return (Math.random() > 0.5) ? api.sendMessage(getText('coinTail'), threadID, messageID) : api.sendMessage(getText('coinHead'), threadID, messageID);
 
 		//money
 		if (contentMessage.indexOf(`${prefix}money`) == 0) {
 			var content = contentMessage.slice(prefix.length + 6, contentMessage.length);
 			var mention = Object.keys(event.mentions)[0];
-			if (!content) return Economy.getMoney(senderID).then((moneydb) => api.sendMessage(`Số tiền của bạn hiện đang có là: ${moneydb} đô`, threadID, messageID));
+			if (!content) return Economy.getMoney(senderID).then((moneydb) => api.sendMessage(getText('moneyMe', moneydb), threadID, messageID));
 			else if (content.indexOf("@") !== -1)
 				return Economy.getMoney(mention).then((moneydb) => {
 					api.sendMessage({
-						body: `Số tiền của ${event.mentions[mention].replace("@", "")} hiện đang có là: ${moneydb} đô.`,
+						body: getText('moneyUser', event.mentions[mention].replace("@", ""), moneydb),
 						mentions: [{
 							tag: event.mentions[mention].replace("@", ""),
 							id: mention
@@ -1407,48 +1559,46 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			return Economy.getDailyTime(senderID).then((lastDaily) => {
 				if (lastDaily !== null && cooldown - (Date.now() - lastDaily) > 0) {
 					let time = ms(cooldown - (Date.now() - lastDaily));
-					api.sendMessage("Bạn đã nhận phần thưởng của ngày hôm nay, vui lòng quay lại sau: " + time.hours + " giờ " + time.minutes + " phút " + time.seconds + " giây ", threadID, messageID);
+					api.sendMessage(getText('receivedDaily', time.hours, time.minutes, time.seconds), threadID, messageID);
 				}
 				else
-					api.sendMessage("Bạn đã nhận phần thưởng của ngày hôm nay. Cố gắng lên nhé <3", threadID, () => {
+					api.sendMessage(getText('daily'), threadID, () => {
 						Economy.addMoney(senderID, 200);
 						Economy.updateDailyTime(senderID, Date.now());
-						modules.log("User: " + senderID + " nhận daily thành công!");
 					}, messageID);
 			});
 		}
 
+		//work
 		if (contentMessage == `${prefix}work`) {
 			return Economy.getWorkTime(senderID).then((lastWork) => {
 				let cooldown = 1200000;
 				if (lastWork !== null && cooldown - (Date.now() - lastWork) > 0) {
 					let time = ms(cooldown - (Date.now() - lastWork));
-					api.sendMessage("Bạn đã thăm ngàn, để tránh bị kiệt sức vui lòng quay lại sau: " + time.minutes + " phút " + time.seconds + " giây ", threadID, messageID);
+					api.sendMessage(getText('worked', time.minutes, time.seconds), threadID, messageID);
 				}
 				else {
 					let job = [
-						"bán vé số",
-						"sửa xe",
-						"lập trình",
-						"hack facebook",
-						"thợ sửa ống nước ( ͡° ͜ʖ ͡°)",
-						"đầu bếp",
-						"thợ hồ",
-						"fake taxi",
-						"gangbang người khác",
-						"re sờ chym mờ",
-						"bán hàng online",
-						"nội trợ",
-						"vả mấy thằng sao đỏ, giun vàng",
-						"bán hoa",
-						"tìm jav/hentai code cho SpermLord",
-						"chơi Yasuo trong rank và gánh team"
+						getText('job1'),
+						getText('job2'),
+						getText('job3'),
+						getText('job4'),
+						getText('job5'),
+						getText('job6'),
+						getText('job7'),
+						getText('job8'),
+						getText('job9'),
+						getText('job10'),
+						getText('job11'),
+						getText('job12'),
+						getText('job13'),
+						getText('job14'),
+						getText('job15')
 					];
 					let amount = Math.floor(Math.random() * 400);
-					api.sendMessage(`Bạn đã làm công việc: "${job[Math.floor(Math.random() * job.length)]}" và đã nhận được số tiền là: ${amount} đô`, threadID, () => {
+					api.sendMessage(getText('work', job[Math.floor(Math.random() * job.length)], amount), threadID, () => {
 						Economy.addMoney(senderID, parseInt(amount));
 						Economy.updateWorkTime(senderID, Date.now());
-						modules.log("User: " + senderID + " nhận job thành công!");
 					}, messageID);
 				}
 			});
@@ -1456,47 +1606,46 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 
 		//roulette
 		if (contentMessage.indexOf(`${prefix}roul`) == 0) {
-			return Economy.getMoney(senderID).then(function(moneydb) {
+			return Economy.getMoney(senderID).then(function (moneydb) {
 				var content = contentMessage.slice(prefix.length + 5, contentMessage.length);
-				if (!content) return api.sendMessage(`Bạn chưa nhập thông tin đặt cược!`, threadID, messageID);
+				if (!content) return api.sendMessage(getText('incorrectSyntax', prefix, 'roul'), threadID, messageID);
 				var color = content.split(" ")[0];
 				var money = content.split(" ")[1];
-				if (isNaN(money) || money.indexOf("-") !== -1) return api.sendMessage(`Số tiền đặt cược của bạn không phải là một con số, vui lòng xem lại cách sử dụng tại ${prefix}help roul`, threadID, messageID);
-				if (!money || !color) return api.sendMessage("Sai format", threadID, messageID);
-				if (money > moneydb) return api.sendMessage(`Số tiền của bạn không đủ`, threadID, messageID);
-				if (money < 50) return api.sendMessage(`Số tiền đặt cược của bạn quá nhỏ, tối thiểu là 50 đô`, threadID, messageID);
+				if (isNaN(money) || money.indexOf("-") !== -1) return api.sendMessage(getText('isNaN'), threadID, messageID);
+				if (!money || !color) return api.sendMessage(getText('incorrectSyntax', prefix, 'roul'), threadID, messageID);
+				if (money > moneydb) return api.sendMessage(getText('notEnoughMoney'), threadID, messageID);
+				if (money < 50) return api.sendMessage(getText('betToLow'), threadID, messageID);
 				var check = (num) => (num == 0) ? '💙' : (num % 2 == 0 && num % 6 != 0 && num % 10 != 0) ? '♥️' : (num % 3 == 0 && num % 6 != 0) ? '💚' : (num % 5 == 0 && num % 10 != 0) ? '💛' : (num % 10 == 0) ? '💜' : '🖤️';
 				let random = Math.floor(Math.random() * 50);
-				
+
 				if (color == "e" || color == "blue") color = 0;
 				else if (color == "r" || color == "red") color = 1;
 				else if (color == "g" || color == "green") color = 2;
 				else if (color == "y" || color == "yellow") color = 3;
 				else if (color == "v" || color == "violet") color = 4;
 				else if (color == "b" || color == "black") color = 5;
-				else return api.sendMessage("Bạn chưa nhập thông tin cá cược!, black [x0.5] red [x1] green [x1.25] yellow [x1.5] violet [x1.75] blue [x2]", threadID, messageID);
-				
-				if (color == 0 && check(random) == '💙') api.sendMessage(`Bạn đã chọn màu 💙, bạn đã thắng với số tiền được nhân lên 2: ${money * 2} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 2)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 2)), messageID);
-				else if (color == 1 && check(random) == '♥️') api.sendMessage(`Bạn đã chọn màu ♥️, bạn đã thắng với số tiền nhân lên 1.75: ${money * 1.75} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 1.75)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 1.75)), messageID);
-				else if (color == 2 && check(random) == '💚') api.sendMessage(`Bạn đã chọn màu 💚, bạn đã thắng với số tiền nhân lên 1.5: ${money * 1.5} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 1.5)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 1.5)), messageID);
-				else if (color == 3 && check(random) == '💛') api.sendMessage(`Bạn đã chọn màu 💛, bạn đã thắng với số tiền nhân lên 1.25: ${money * 1.25} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 1.25)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 1.25)), messageID);
-				else if (color == 4 && check(random) == '💜') api.sendMessage(`Bạn đã chọn màu 💜, bạn đã thắng với số tiền nhân lên 1: ${money} đô\nSố tiền hiện tại của bạn là: ${moneydb + money} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
-				else if (color == 5 && check(random) == '🖤️') api.sendMessage(`Bạn đã chọn màu 🖤️, bạn đã thắng với số tiền nhân lên 0.5: ${money * 0.5} đô\nSố tiền hiện tại của bạn là: ${moneydb + (money * 0.5)} đô.`, threadID, () => Economy.addMoney(senderID, parseInt(money * 0.5)), messageID);
-				else api.sendMessage(`Màu ${check(random)}\nBạn đã ra đê ở và mất trắng số tiền: ${money} đô :'(\nSố tiền hiện tại của bạn là: ${moneydb - money} đô.`, threadID, () => Economy.subtractMoney(senderID, money), messageID)
+				else return api.sendMessage(getText('incorrectSyntax', prefix, 'roul'), threadID, messageID);
+
+				if (color == 0 && check(random) == '💙') api.sendMessage(getText('roulWon', '💙', '2', money * 2), threadID, () => Economy.addMoney(senderID, parseInt(money * 2)), messageID);
+				else if (color == 1 && check(random) == '♥️') api.sendMessage(getText('roulWon', '♥️', '1.75', money * 1.75), threadID, () => Economy.addMoney(senderID, parseInt(money * 1.75)), messageID);
+				else if (color == 2 && check(random) == '💚') api.sendMessage(getText('roulWon', '💚', '1.5', money * 1.5), threadID, () => Economy.addMoney(senderID, parseInt(money * 1.5)), messageID);
+				else if (color == 3 && check(random) == '💛') api.sendMessage(getText('roulWon', '💛', '1.25', money * 1.25), threadID, () => Economy.addMoney(senderID, parseInt(money * 1.25)), messageID);
+				else if (color == 4 && check(random) == '💜') api.sendMessage(getText('roulWon', '💜', '1', money * 1), threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID);
+				else if (color == 5 && check(random) == '🖤️') api.sendMessage(getText('roulWon', '🖤️', '0.5', money * 0.5), threadID, () => Economy.addMoney(senderID, parseInt(money * 0.5)), messageID);
+				else api.sendMessage(getText('roulLose', check(random)), threadID, () => Economy.subtractMoney(senderID, money), messageID)
 			});
 		}
 
 		//slot
 		if (contentMessage.indexOf(`${prefix}sl`) == 0) {
-			const slotItems = ["🍇","🍉","🍊","🍏","7⃣","🍓","🍒","🍌","🥝","🥑","🌽"];
+			const slotItems = ["🍇", "🍉", "🍊", "🍏", "7⃣", "🍓", "🍒", "🍌", "🥝", "🥑", "🌽"];
 			return Economy.getMoney(senderID).then((moneydb) => {
 				var money = contentMessage.slice(prefix.length + 3, contentMessage.length);
-				if (!money) return api.sendMessage(`Bạn chưa nhập số tiền đặt cược!`, threadID, messageID);
+				if (!money) return api.sendMessage(getText('incorrectSyntax', prefix, 'sl'), threadID, messageID);
 				let win = false;
-				if (isNaN(money)|| money.indexOf("-") !== -1) return api.sendMessage(`Số tiền đặt cược của bạn không phải là một con số, vui lòng xem lại cách sử dụng tại ${prefix}help sl`, threadID, messageID);
-				if (!money) return api.sendMessage("Chưa nhập số tiền đặt cược!", threadID, messageID);
-				if (money > moneydb) return api.sendMessage(`Số tiền của bạn không đủ`, threadID, messageID);
-				if (money < 50) return api.sendMessage(`Số tiền đặt cược của bạn quá nhỏ, tối thiểu là 50 đô!`, threadID, messageID);
+				if (isNaN(money) || money.indexOf("-") !== -1) return api.sendMessage(getText('isNaN'), threadID, messageID);
+				if (money > moneydb) return api.sendMessage(getText('notEnoughMoney'), threadID, messageID);
+				if (money < 50) return api.sendMessage(getText('betToLow'), threadID, messageID);
 				let number = [];
 				for (i = 0; i < 3; i++) number[i] = Math.floor(Math.random() * slotItems.length);
 				if (number[0] == number[1] && number[1] == number[2]) {
@@ -1507,7 +1656,7 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 					money *= 2;
 					win = true;
 				}
-				(win) ? api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thắng, toàn bộ ${money} đô thuộc về bạn. Số tiền hiện tại bạn có: ${moneydb + money}`, threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID) : api.sendMessage(`${slotItems[number[0]]} | ${slotItems[number[1]]} | ${slotItems[number[2]]}\n\nBạn đã thua, toàn bộ ${money} đô bay vào không trung xD. Số tiền hiện tại bạn có: ${moneydb - money}`, threadID, () => Economy.subtractMoney(senderID, parseInt(money)), messageID);
+				(win) ? api.sendMessage(getText('slotWon', slotItems[number[0]], slotItems[number[1]], slotItems[number[2]], money), threadID, () => Economy.addMoney(senderID, parseInt(money)), messageID) : api.sendMessage(getText('slotLose', slotItems[number[0]], slotItems[number[1]], slotItems[number[2]], money), threadID, () => Economy.subtractMoney(senderID, parseInt(money)), messageID);
 			});
 		}
 
@@ -1517,12 +1666,12 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 			var content = contentMessage.slice(prefix.length + 4, contentMessage.length);
 			var moneyPay = content.substring(content.lastIndexOf(" ") + 1);
 			Economy.getMoney(senderID).then((moneydb) => {
-				if (!moneyPay) return api.sendMessage("Bạn chưa nhập số tiền cần chuyển!", threadID, messageID);
-				if (isNaN(moneyPay) || moneyPay.indexOf("-") !== -1) return api.sendMessage(`Số tiền bạn nhập không hợp lệ, vui lòng xem lại cách sử dụng tại ${prefix}help pay`, threadID, messageID);
-				if (moneyPay > moneydb) return api.sendMessage('Số tiền mặt trong người bạn không đủ, vui lòng kiểm tra lại số tiền bạn đang có!', threadID, messageID);
-				if (moneyPay < 50) return api.sendMessage(`Số tiền cần chuyển của bạn quá nhỏ, tối thiểu là 50 đô!`, threadID, messageID);
+				if (!moneyPay) return api.sendMessage(getText('incorrectSyntax', prefix, 'pay'), threadID, messageID);
+				if (isNaN(moneyPay) || moneyPay.indexOf("-") !== -1) return api.sendMessage(getText('isNaN'), threadID, messageID);
+				if (moneyPay > moneydb) return api.sendMessage(getText('notEnoughMoney'), threadID, messageID);
+				if (moneyPay < 50) return api.sendMessage(getText('payToLow'), threadID, messageID);
 				return api.sendMessage({
-					body: `Bạn đã chuyển ${moneyPay} đô cho ${event.mentions[mention].replace("@", "")}.`,
+					body: getText('pay', moneyPay, event.mentions[mention].replace("@", "")),
 					mentions: [{
 						tag: event.mentions[mention].replace("@", ""),
 						id: mention
@@ -1537,13 +1686,13 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		//setmoney
 		if (contentMessage.indexOf(`${prefix}setmoney`) == 0 && admins.includes(senderID)) {
 			var mention = Object.keys(event.mentions)[0];
-			var content = contentMessage.slice(prefix.length + 9,contentMessage.length);
+			var content = contentMessage.slice(prefix.length + 9, contentMessage.length);
 			var sender = content.slice(0, content.lastIndexOf(" "));
 			var moneySet = content.substring(content.lastIndexOf(" ") + 1);
-			if (isNaN(moneySet)) return api.sendMessage('Số tiền cần set của bạn không phải là 1 con số!', threadID, messageID);
-			if (!mention && sender == 'me') return api.sendMessage("Đã sửa tiền của bản thân thành " + moneySet, threadID, () => Economy.setMoney(senderID, parseInt(moneySet)), messageID);
+			if (isNaN(moneySet)) return api.sendMessage(getText('isNaN'), threadID, messageID);
+			if (!mention && sender == 'me') return api.sendMessage(getText('setMeMoney', moneySet), threadID, () => Economy.setMoney(senderID, parseInt(moneySet)), messageID);
 			return api.sendMessage({
-				body: `Bạn đã sửa tiền của ${event.mentions[mention].replace("@", "")} thành ${moneySet} đô.`,
+				body: getText('setUserMoney', event.mentions[mention].replace("@", ""), moneySet),
 				mentions: [{
 					tag: event.mentions[mention].replace("@", ""),
 					id: mention
@@ -1552,241 +1701,359 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 		}
 
 		// steal
-		if (contentMessage == `${prefix}steal` && senderID != api.getCurrentUserID()) {
+		if (contentMessage == `${prefix}steal`) {
 			let cooldown = 1800000;
-				Economy.getStealTime(senderID).then(function(lastSteal) {
+			Economy.getStealTime(senderID).then(async function (lastSteal) {
 				if (lastSteal !== null && cooldown - (Date.now() - lastSteal) > 0) {
 					let time = ms(cooldown - (Date.now() - lastSteal));
-					api.sendMessage("Bạn vừa ăn trộm, để tránh bị lên phường vui lòng quay lại sau: " + time.minutes + " phút " + time.seconds + " giây ", threadID, messageID);
+					api.sendMessage(getText('stealCooldown', time.minutes, time.seconds), threadID, messageID);
 				}
 				else {
-					api.getThreadInfo(threadID, function(err, info) {
-						if (err) throw err;
-						let victim = info.participantIDs[Math.floor(Math.random() * info.participantIDs.length)];
-						User.createUser(victim);
-						User.getName(victim).then(nameV => {
-							User.getName(senderID).then(name => {
-								if (victim == api.getCurrentUserID() && senderID == victim) return api.sendMessage("Cần lao vi tiên thủ\nNăng cán dĩ đắc thực\nVô vi thực đầu buồi\nThực cứt thế cho nhanh", threadID, messageID);
-								else if (senderID != victim && victim != api.getCurrentUserID()) {
-									var route = Math.floor(Math.random() * 5);
-									if (route > 1 || route == 0) {
-										Economy.getMoney(victim).then(moneydb => {
-											var money = Math.floor(Math.random() * 200) + 1;
-											if (moneydb <= 0 || moneydb == undefined) return api.sendMessage("Bạn đen vl, trộm được mỗi cục cứt xD", threadID, messageID);
-											else if (moneydb >= money) return api.sendMessage(`Bạn vừa trộm ${money} đô từ 1 thành viên trong nhóm`, threadID, () => {
-												Economy.subtractMoney(victim, money);
-												Economy.addMoney(senderID, parseInt(money));
-											}, messageID);
-											else if (moneydb < money) return api.sendMessage(`Bạn vừa trộm TẤT CẢ ${moneydb} đô của 1 thành viên trong nhóm`, threadID, () => {
-												Economy.subtractMoney(victim, parseInt(moneydb));
-												Economy.addMoney(senderID, parseInt(moneydb));
-											}, messageID);
-											else return api.sendMessage("Bạn đen vl, trộm được cục cứt xD", threadID, messageID);
-										})
-									} else if (route == 1) {
-										Economy.getMoney(senderID).then(moneydb => {
-											if (moneydb <= 0) return api.sendMessage("Cần lao vi tiên thủ\nNăng cán dĩ đắc thực\nVô vi thực đầu buồi\nThực cứt thế cho nhanh", threadID, messageID);
-											else if (moneydb > 0) return api.sendMessage(`Bạn bị tóm vì tội ăn trộm, mất ${moneydb} đô`, threadID, () => api.sendMessage({body: `Chúc mừng anh hùng ${nameV} tóm gọn tên trộm ${name} và đã nhận được tiền thưởng ${Math.floor(moneydb / 2)} đô`, mentions: [{ tag: nameV, id: victim}, {tag: name, id: senderID}]}, threadID, () => {
-												Economy.subtractMoney(senderID, moneydb);
-												Economy.addMoney(victim, parseInt(Math.floor(moneydb / 2)));
-											}), messageID);
-										})
-									}
-								}
-							})
-						})
-					})
 					Economy.updateStealTime(senderID, Date.now());
-				};
-			})
-			return;
+					let all = await User.getUsers(['uid']);
+					let victim = all[Math.floor(Math.random() * all.length)].uid;
+					let nameVictim = await User.getName(victim);
+					if (victim == api.getCurrentUserID() && senderID == victim) return api.sendMessage(getText('stealFailed1'), threadID, messageID);
+					var route = Math.floor(Math.random() * 5);
+					if (route > 1 || route == 0) {
+						let moneydb = await Economy.getMoney(victim);
+						var money = Math.floor(Math.random() * 200) + 1;
+						if (moneydb <= 0 || moneydb == undefined) return api.sendMessage(getText('stealPoorUser'), threadID, messageID);
+						else if (moneydb >= money) return api.sendMessage(getText('steal1', money), threadID, () => {
+							Economy.subtractMoney(victim, money);
+							Economy.addMoney(senderID, parseInt(money));
+						}, messageID);
+						else if (moneydb < money) return api.sendMessage(getText('steal2', moneydb), threadID, () => {
+							Economy.subtractMoney(victim, parseInt(moneydb));
+							Economy.addMoney(senderID, parseInt(moneydb));
+						}, messageID);
+					}
+					else if (route == 1) {
+						Economy.getMoney(senderID).then(moneydb => {
+							if (moneydb <= 0) return api.sendMessage(getText('needMoney'), threadID, messageID);
+							else if (moneydb > 0) return api.sendMessage(getText('stealFailed2', moneydb), threadID, () => api.sendMessage({ body: getText('congratHero', nameVictim, name, Math.floor(moneydb / 2)), mentions: [{ tag: nameVictim, id: victim }, { tag: name, id: senderID }] }, threadID, () => {
+								Economy.subtractMoney(senderID, moneydb);
+								Economy.addMoney(victim, parseInt(Math.floor(moneydb / 2)));
+							}), messageID);
+						});
+					}
+				}
+			});
 		}
 
 		//fishing
-		if (contentMessage.indexOf(`${prefix}fishing`) == 0)
-			return (async () => {
-				var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
-				let inventory = await Fishing.getInventory(senderID);
-				if (!content) {
-					let stats = await Fishing.getStats(senderID);
-					let lastTimeFishing = await Fishing.lastTimeFishing(senderID);
-					let moneydb = await Economy.getMoney(senderID);
-					if (new Date() - new Date(lastTimeFishing) >= 5000) {
-						var roll = Math.floor(Math.random() * 1008);
-						lastTimeFishing = new Date();
-						stats.casts += 1;
-						if (roll <= 400) {
-							var arrayTrash = ["🏐","💾","📎","💩","🦴","🥾","🥾","🌂"];
-							inventory.trash += 1;
-							stats.trash += 1;
-							api.sendMessage(arrayTrash[Math.floor(Math.random() * arrayTrash.length)] + ' | Oh, xung quanh bạn toàn là rác êii', threadID, messageID);
-						}
-						else if (roll > 400 && roll <= 700) {
-							inventory.fish1 += 1;
-							stats.fish1 += 1;
-							api.sendMessage('🐟 | Bạn đã bắt được một con cá cỡ bình thường 😮', threadID, messageID);
-						}
-						else if (roll > 700 && roll <= 900) {
-							inventory.fish2 += 1;
-							stats.fish2 += 1;
-							api.sendMessage('🐠 | Bạn đã bắt được một con cá hiếm 😮', threadID, messageID);
-						}
-						else if (roll > 900 && roll <= 960) {
-							inventory.crabs += 1;
-							stats.crabs += 1;
-							api.sendMessage('🦀 | Bạn đã bắt được một con cua siêu to khổng lồ 😮', threadID, messageID);
-						}
-						else if (roll > 960 && roll <= 1001) {
-							inventory.blowfish += 1;
-							stats.blowfish += 1;
-							api.sendMessage('🐡 | Bạn đã bắt được một con cá nóc *insert meme cá nóc ăn carot .-.*', threadID, messageID);
-						}
-						else if (roll == 1002) {
-							inventory.crocodiles += 1;
-							stats.crocodiles += 1;
-							api.sendMessage('🐊 | Bạn đã bắt được một con cá sấu đẹp trai hơn cả bạn 😮', threadID, messageID);
-						}
-						else if (roll == 1003) {
-							inventory.whales += 1;
-							stats.whales += 1;
-							api.sendMessage('🐋 | Bạn đã bắt được một con cá voi siêu to khổng lồ 😮', threadID, messageID);
-						}
-						else if (roll == 1004) {
-							inventory.dolphins += 1;
-							stats.dolphins += 1;
-							api.sendMessage('🐬 | Damn bro, tại sao bạn lại bắt một con cá heo dễ thương thế kia 😱', threadID, messageID);
-						}
-						else if (roll == 1006) {
-							inventory.squid += 1;
-							stats.squid += 1;
-							api.sendMessage('🦑 | Bạn đã bắt được một con mực 🤤', threadID, messageID);
-						}
-						else if (roll == 1007) {
-							inventory.sharks += 1;
-							stats.sharks += 1;
-							api.sendMessage('🦈 | Bạn đã bắt được một con cá mập nhưng không mập 😲', threadID, messageID);
-						}
-						await Fishing.updateLastTimeFishing(senderID, lastTimeFishing);
-						await Fishing.updateInventory(senderID, inventory);
-						await Fishing.updateStats(senderID, stats);
-						await Economy.subtractMoney(senderID, 2);
+		if (contentMessage.indexOf(`${prefix}fishing`) == 0) {
+			let inventory = await Fishing.getInventory(senderID);
+			let timeout = ['30000', '25000', '20000', '15000', '5000'];
+			var content = contentMessage.slice(prefix.length + 8, contentMessage.length);
+			var rodLevel = inventory.rod - 1;
+			if (!content) {
+				if (inventory.rod == 0) return api.sendMessage(getText('noRod'), threadID, messageID);
+				let lastTimeFishing = await Fishing.lastTimeFishing(senderID);
+				if (new Date() - new Date(lastTimeFishing) <= timeout[rodLevel]) return api.sendMessage(getText('limitFishTime', timeout[rodLevel] / 1000), threadID, messageID);
+				if (inventory.durability <= 0) return api.sendMessage(getText('brokenRod'), threadID);
+				let stats = await Fishing.getStats(senderID);
+				var roll = Math.floor(Math.random() * 1008);
+				inventory.exp += Math.floor(Math.random() * 500);
+				inventory.durability -= Math.floor(Math.random() * 9) + 1;
+				stats.exp += Math.floor(Math.random() * 500);
+				stats.casts += 1;
+				if (Math.floor(Math.random() * 51) == 51) {
+					let difficulty, answer, value1, value2;
+					var difficulties = ['baby', 'easy', 'medium', 'hard', 'extreme'];
+					difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
+					var operations = ['+', '-', '*'];
+					var maxValues = { baby: 10, easy: 50, medium: 100, hard: 500, extreme: 1000 };
+					var operation = operations[Math.floor(Math.random() * operations.length)];
+					value1 = Math.floor(Math.random() * maxValues[difficulty] - 1) + 1;
+					value2 = Math.floor(Math.random() * maxValues[difficulty] - 1) + 1;
+					switch (operation) {
+						case '+':
+							answer = value1 + value2;
+							break;
+						case '-':
+							answer = value1 - value2;
+							break;
+						case '*':
+							answer = value1 * value2;
+							break;
 					}
-					else if (new Date() - new Date(lastTimeFishing) <= 5000) api.sendMessage('Bạn chỉ được câu cá mỗi 5 giây một lần, vui lòng không spam .-.', threadID, messageID);
+					await Fishing.updateLastTimeFishing(senderID, new Date());
+					return api.sendMessage(getText('defeatMonster', difficulty, `${value1} ${operation} ${value2} = ?`), threadID, (err, info) => __GLOBAL.reply.push({ type: "fishing_domath", messageID: info.messageID, target: parseInt(threadID), author: senderID, answer }), messageID)
 				}
-				else if (content.indexOf('túi') == 0) {
-					var total = inventory.trash + inventory.fish1 * 30 + inventory.fish2 * 100 + inventory.crabs * 250 + inventory.blowfish * 300 + inventory.crocodiles * 500 + inventory.whales * 750 + inventory.dolphins * 750 + inventory.squid * 1000 + inventory.sharks * 1000;
-					api.sendMessage(
-						"===== Inventory Của Bạn =====" +
-						"\n- Số lượng:" +
-						"\n+ Rác | 🗑️: " + inventory.trash +
-						"\n+ Cá cỡ bình thường | 🐟: " + inventory.fish1 +
-						"\n+ Cá hiếm | 🐠: " + inventory.fish2 +
-						"\n+ Cua | 🦀: " + inventory.crabs +
-						"\n+ Cá nóc | 🐡: " + inventory.blowfish +
-						"\n+ Cá sấu | 🐊: " + inventory.crocodiles +
-						"\n+ Cá voi | 🐋: " + inventory.whales +
-						"\n+ Cá heo | 🐬: " + inventory.dolphins +
-						"\n+ Mực | 🦑: " + inventory.squid +
-						"\n+ Cá mập | 🦈: " + inventory.sharks +
-						"\n- Tổng số tiền bạn có thể thu được sau khi bán: " + total + " đô ",
-						threadID, messageID
-					);
+				if (roll <= 400) {
+					var arrayTrash = ["🏐", "💾", "📎", "💩", "🦴", "🥾", "🥾", "🌂"];
+					inventory.trash += 1;
+					stats.trash += 1;
+					api.sendMessage(arrayTrash[Math.floor(Math.random() * arrayTrash.length)] + getText('caught', getText('trashes')), threadID, messageID);
 				}
-				else if (content.indexOf('bán') == 0) {
-					var choose = content.split(' ')[1];
-					if (!choose) return api.sendMessage('Chưa nhập thứ cần bán.', threadID, messageID);
-					else if (choose == 'trash' || choose == '1') {
-						var y = inventory.trash;
-						inventory.trash = 0;
-						var money = parseInt(1 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' rác và nhận được ' + money + ' đô', threadID, messageID);
+				else if (roll > 400 && roll <= 700) {
+					inventory.fish1 += 1;
+					stats.fish1 += 1;
+					api.sendMessage('🐟 | ' + getText('caught', getText('fish1')), threadID, messageID);
+				}
+				else if (roll > 700 && roll <= 900) {
+					inventory.fish2 += 1;
+					stats.fish2 += 1;
+					api.sendMessage('🐠 | ' + getText('caught', getText('fish2')), threadID, messageID);
+				}
+				else if (roll > 900 && roll <= 960) {
+					inventory.crabs += 1;
+					stats.crabs += 1;
+					api.sendMessage('🦀 | ' + getText('caught', getText('crabs')), threadID, messageID);
+				}
+				else if (roll > 960 && roll <= 1001) {
+					inventory.blowfishes += 1;
+					stats.blowfishes += 1;
+					api.sendMessage('🐡 | ' + getText('caught', getText('blowfishes')), threadID, messageID);
+				}
+				else if (roll == 1002) {
+					inventory.crocodiles += 1;
+					stats.crocodiles += 1;
+					api.sendMessage('🐊 | ' + getText('caught', getText('crocodiles')), threadID, messageID);
+				}
+				else if (roll == 1003) {
+					inventory.whales += 1;
+					stats.whales += 1;
+					api.sendMessage('🐋 | ' + getText('caught', getText('whales')), threadID, messageID);
+				}
+				else if (roll == 1004) {
+					inventory.dolphins += 1;
+					stats.dolphins += 1;
+					api.sendMessage('🐬 | ' + getText('caught', getText('dolphins')), threadID, messageID);
+				}
+				else if (roll == 1006) {
+					inventory.squids += 1;
+					stats.squids += 1;
+					api.sendMessage('🦑 | ' + getText('caught', getText('squids')), threadID, messageID);
+				}
+				else if (roll == 1007) {
+					inventory.sharks += 1;
+					stats.sharks += 1;
+					api.sendMessage('🦈 | ' + getText('caught', getText('sharks')), threadID, messageID);
+				}
+				await Fishing.updateLastTimeFishing(senderID, new Date());
+				await Fishing.updateInventory(senderID, inventory);
+				await Fishing.updateStats(senderID, stats);
+			}
+			else if (content.indexOf('bag') == 0) {
+				if (inventory.rod == 0) return api.sendMessage(getText('noRod'), threadID, messageID);
+				let durability = ['50', '70', '100', '130', '200', '400'];
+				let expToLevelup = ['1000','2000','4000','6000','8000'];
+				var total = inventory.trashes + inventory.fish1 * 30 + inventory.fish2 * 100 + inventory.crabs * 250 + inventory.blowfishes * 300 + inventory.crocodiles * 500 + inventory.whales * 750 + inventory.dolphins * 750 + inventory.squids * 1000 + inventory.sharks * 1000;
+				api.sendMessage(getText('inv1', inventory.rod, inventory.durability, durability[rodLevel], inventory.exp, expToLevelup[inventory.rod - 1]) + getText('inv2', inventory.trashes, inventory.fish1, inventory.fish2, inventory.crabs, inventory.blowfishes, inventory.crocodiles, inventory.whales, inventory.dolphins, inventory.squids, inventory.sharks) + getText('inv3', total), threadID, messageID);
+			}
+			else if (content.indexOf('sell') == 0) {
+				var choose = content.split(' ')[1];
+				if (!choose) return api.sendMessage(getText('noSellItem'), threadID, messageID);
+				else if (choose == 'trash' || choose == '1') {
+					var y = inventory.trasesh;
+					inventory.trashes = 0;
+					var money = parseInt(1 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('trashes'), money), threadID, messageID);
+				}
+				else if (choose == 'common' || choose == '2') {
+					var y = inventory.fish1;
+					inventory.fish1 = 0;
+					var money = parseInt(30 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('fish1'), money), threadID, messageID);
+				}
+				else if (choose == 'rare' || choose == '3') {
+					var y = inventory.fish2;
+					inventory.fish2 = 0;
+					var money = parseInt(100 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('fish2'), money), threadID, messageID);
+				}
+				else if (choose == 'crabs' || choose == '4') {
+					var y = inventory.crabs;
+					inventory.crabs = 0;
+					var money = parseInt(250 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('crabs'), money), threadID, messageID);
+				}
+				else if (choose == 'blowfish' || choose == '8') {
+					var y = inventory.blowfishes;
+					inventory.blowfishes = 0;
+					var money = parseInt(300 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('blowfishes'), money), threadID, messageID);
+				}
+				else if (choose == 'crocodiles' || choose == '5') {
+					var y = inventory.crocodiles;
+					inventory.crocodiles = 0;
+					var money = parseInt(500 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('crocodiles'), money), threadID, messageID);
+				}
+				else if (choose == 'whales' || choose == '6') {
+					var y = inventory.whales;
+					inventory.whales = 0;
+					var money = parseInt(750 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('whales'), money), threadID, messageID);
+				}
+				else if (choose == 'dolphins' || choose == '7') {
+					var y = inventory.dolphins;
+					inventory.dolphins = 0;
+					var money = parseInt(750 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('dolphins'), money), threadID, messageID);
+				}
+				else if (choose == 'squid' || choose == '9') {
+					var y = inventory.squids;
+					inventory.squids = 0;
+					var money = parseInt(1000 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('squids'), money), threadID, messageID);
+				}
+				else if (choose == 'sharks' || choose == '10') {
+					var y = inventory.sharks;
+					inventory.sharks = 0;
+					var money = parseInt(1000 * y);
+					api.sendMessage('🎣 | ' + getText('sellItem', y, getText('sharks'), money), threadID, messageID);
+				}
+				else if (choose == 'all') {
+					var money = parseInt(inventory.trashes + inventory.fish1 * 30 + inventory.fish2 * 100 + inventory.crabs * 250 + inventory.blowfishes * 300 + inventory.crocodiles * 500 + inventory.whales * 750 + inventory.dolphins * 750 + inventory.squids * 1000 + inventory.sharks * 1000);
+					return api.sendMessage('🎣 | ' + getText('sellAllItems', money), threadID, (err, info) => {
+						if (err) throw err;
+						__GLOBAL.confirm.push({
+							type: "fishing_sellAll",
+							messageID: info.messageID,
+							target: parseInt(threadID),
+							author: senderID
+						});
+					}, messageID);
+				}
+				await Fishing.updateInventory(senderID, inventory);
+				await Economy.addMoney(senderID, money);
+			}
+			else if (content.indexOf("list") == 0) return api.sendMessage(getText('itemList'), threadID, messageID);
+			else if (content.indexOf("steal") == 0) {
+				let cooldown = 1800000;
+				Fishing.getStealFishingTime(senderID).then(async function (lastStealFishing) {
+					if (lastStealFishing !== null && cooldown - (Date.now() - lastStealFishing) > 0) {
+						let time = ms(cooldown - (Date.now() - lastStealFishing));
+						return api.sendMessage(getText('stealFishCooldown', time.minutes, time.seconds), threadID, messageID);
 					}
-					else if (choose == 'common' || choose == '2') {
-						var y = inventory.fish1;
-						inventory.fish1 = 0;
-						var money = parseInt(30 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá bình thường và nhận được ' + money + ' đô', threadID, messageID);
+					else {
+						let all = await User.getUsers(['uid']);
+						let victim = all[Math.floor(Math.random() * all.length)].uid;
+						let inventoryStealer = await Fishing.getInventory(senderID);
+						let inventoryVictim = await Fishing.getInventory(victim);
+						let route = Math.floor(Math.random() * 3000);
+						let swap = Math.floor(Math.random() * 51);
+						if (victim == api.getCurrentUserID() || senderID == victim) return api.sendMessage(getText('stealFishFailed1'), threadID, messageID);
+						else if (senderID != victim && victim != api.getCurrentUserID()) {
+							if (swap >= 0 && swap <= 50) {
+								if (route == 3000) {
+									let shark = getText('sharks').replace(/\(e?s\)/, '');
+									if (inventoryVictim.sharks == 0) return api.sendMessage(getText('intendSteal', shark), threadID, messageID);
+									else {
+										inventoryVictim.sharks -= 1;
+										inventoryStealer.sharks += 1;
+										api.sendMessage(getText('stealFish', shark), threadID, messageID);
+									}
+								}
+								else if (route == 2999) {
+									let squid = getText('squids').replace(/\(e?s\)/, '');
+									if (inventoryVictim.squid == 0) return api.sendMessage(getText('intendSteal', squid), threadID, messageID);
+									else {
+										inventoryVictim.squid -= 1;
+										inventoryStealer.squid += 1;
+										api.sendMessage(getText('stealFish', squid), threadID, messageID);
+									}
+								}
+								else if (route == 2998) {
+									let dolphin = getText('dolphins').replace(/\(e?s\)/, '');
+									if (inventoryVictim.dolphins == 0) return api.sendMessage(getText('intendSteal', dolphin), threadID, messageID);
+									else {
+										inventoryVictim.dolphins -= 1;
+										inventoryStealer.dolphins += 1;
+										api.sendMessage(getText('stealFish', dolphin), threadID, messageID);
+									}
+								}
+								else if (route == 2997) {
+									let whale = getText('whales').replace(/\(e?s\)/, '');
+									if (inventoryVictim.whales == 0) return api.sendMessage(getText('intendSteal', whale), threadID, messageID);
+									else {
+										inventoryVictim.whales -= 1;
+										inventoryStealer.whales += 1;
+										api.sendMessage(getText('stealFish', whale), threadID, messageID);
+									}
+								}
+								else if (route == 2996) {
+									let crocodile = getText('crocodiles').replace(/\(e?s\)/, '');
+									if (inventoryVictim.crocodiles == 0) return api.sendMessage(getText('intendSteal', crocodile), threadID, messageID);
+									else {
+										inventoryVictim.crocodiles -= 1;
+										inventoryStealer.crocodiles += 1;
+										api.sendMessage(getText('stealFish', crocodile), threadID, messageID);
+									}
+								}
+								else if (route == 2995) {
+									let blowfish = getText('blowfishes').replace(/\(e?s\)/, '');
+									if (inventoryVictim.blowfish == 0) return api.sendMessage(getText('intendSteal', blowfish), threadID, messageID);
+									else {
+										inventoryVictim.blowfish -= 1;
+										inventoryStealer.blowfish += 1;
+										api.sendMessage(getText('stealFish', blowfish), threadID, messageID);
+									}
+								}
+								else if (route == 2994) {
+									let crab = getText('crabs').replace(/\(e?s\)/, '');
+									if (inventoryVictim.crabs == 0) return api.sendMessage(getText('intendSteal', crab), threadID, messageID);
+									else {
+										inventoryVictim.crabs -= 1;
+										inventoryStealer.crabs += 1;
+										api.sendMessage(getText('stealFish', crab), threadID, messageID);
+									}
+								}
+								else if (route >= 2000 && route < 2994) {
+									let fish2 = getText('fish2').replace(/\(e?s\)/, '');
+									if (inventoryVictim.fish2 == 0) return api.sendMessage(getText('intendSteal', fish2), threadID, messageID);
+									else {
+										inventoryVictim.fish2 -= 1;
+										inventoryStealer.fish2 += 1;
+										api.sendMessage(getText('stealFish', fish2), threadID, messageID);
+									}
+								}
+								else if (route >= 1000 && route < 2000) {
+									let fish1 = getText('fish1').replace(/\(e?s\)/, '');
+									if (inventoryVictim.fish1 == 0) return api.sendMessage(getText('intendSteal', fish1), threadID, messageID);
+									else {
+										inventoryVictim.fish1 -= 1;
+										inventoryStealer.fish1 += 1;
+										api.sendMessage(getText('stealFish', fish1), threadID, messageID);
+									}
+								}
+								else if (route >= 0 && route < 1000) {
+									let trash = getText('trashes').replace(/\(e?s\)/, '');
+									if (inventoryVictim.trash == 0) return api.sendMessage(getText('intendSteal', trash + ' (?)'), threadID, messageID);
+									else {
+										inventoryVictim.trash -= 1;
+										inventoryStealer.trash += 1;
+										api.sendMessage(getText('stealFish', getText('trashes')), threadID, messageID);
+									}
+								}
+								await Fishing.updateInventory(victim, inventoryVictim);
+								await Fishing.updateInventory(senderID, inventoryStealer);
+							}
+							else if (swap > 50) {
+								inventoryStealer.trash = 0;
+								inventoryStealer.fish1 = 0;
+								inventoryStealer.fish2 = 0;
+								inventoryStealer.crabs = 0;
+								inventoryStealer.crocodiles = 0;
+								inventoryStealer.whales = 0;
+								inventoryStealer.dolphins = 0;
+								inventoryStealer.blowfish = 0;
+								inventoryStealer.squid = 0;
+								inventoryStealer.sharks = 0;
+								api.sendMessage(getText('stealFishFailed2'), threadID, messageID);
+								await Fishing.updateInventory(senderID, inventoryStealer);
+							}
+						}
 					}
-					else if (choose == 'rare' || choose == '3') {
-						var y = inventory.fish2;
-						inventory.fish2 = 0;
-						var money = parseInt(100 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá hiếm và nhận được ' + money + ' đô', threadID, messageID);
-					}
-					else if (choose == 'crabs' || choose == '4') {
-						var y = inventory.crabs;
-						inventory.crabs = 0;
-						var money = parseInt(250 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cua và nhận được ' + money + ' đô', threadID, messageID);
-					}
-					else if (choose == 'blowfish' || choose == '8') {
-						var y = inventory.blowfish;
-						inventory.blowfish = 0;
-						var money = parseInt(300 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá nóc và nhận được ' + money + ' đô', threadID, messageID);
-					}
-					else if (choose == 'crocodiles' || choose == '5') {
-						var y = inventory.crocodiles;
-						inventory.crocodiles = 0;
-						var money = parseInt(500 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá sấu và nhận được ' + money + ' đô', threadID, messageID);
-					}
-					else if (choose == 'whales' || choose == '6') {
-						var y = inventory.whales;
-						inventory.whales = 0;
-						var money = parseInt(750 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá voi và nhận được ' + money + ' đô', threadID, messageID);
-					}
-					else if (choose == 'dolphins' || choose == '7') {
-						var y = inventory.dolphins;
-						inventory.dolphins = 0;
-						var money = parseInt(750 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá heo và nhận được ' + money + ' đô', threadID, messageID);
-					}
-					else if (choose == 'squid' || choose == '9') {
-						var y = inventory.squid;
-						inventory.squid = 0;
-						var money = parseInt(1000 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con mực và nhận được ' + money + ' đô', threadID, messageID);
-					}
-					else if (choose == 'sharks' || choose == '10') {
-						var y = inventory.sharks;
-						inventory.sharks = 0;
-						var money = parseInt(1000 * y);
-						api.sendMessage('🎣 | Bạn đã bán ' + y + ' con cá mập và nhận được ' + money + ' đô', threadID, messageID);
-					}
-					else if (choose == 'all') {
-						var money = parseInt(inventory.trash + inventory.fish1 * 30 + inventory.fish2 * 100 + inventory.crabs * 250 + inventory.blowfish * 300 + inventory.crocodiles * 500 + inventory.whales * 750 + inventory.dolphins * 750 + inventory.squid * 1000 + inventory.sharks * 1000);
-						inventory.trash = 0;
-						inventory.fish1 = 0;
-						inventory.fish2 = 0;
-						inventory.crabs = 0;
-						inventory.crocodiles = 0;
-						inventory.whales = 0;
-						inventory.dolphins = 0;
-						inventory.blowfish = 0;
-						inventory.squid = 0;
-						inventory.sharks = 0;
-						api.sendMessage('🎣 | Bạn đã bán toàn bộ sản lượng trong túi và thu về được ' + money + ' đô', threadID, messageID);
-					}
-					await Fishing.updateInventory(senderID, inventory);
-					await Economy.addMoney(senderID, money);
-				} else if (content.indexOf("list") == 0) return api.sendMessage(
-						"===== Danh sách tiền của mọi loại cá =====" +
-						"\n1/ Rác | 🗑️: 1 đô" +
-						"\n2/ Cá cỡ bình thường | 🐟: 30 đô" +
-						"\n3/ Cá hiếm | 🐠: 100 đô" +
-						"\n4/ Cua | 🦀: 250 đô" +
-						"\n5/ Cá nóc | 🐡: 300 đô" +
-						"\n6/ Cá sấu | 🐊: 500 đô" +
-						"\n7/ Cá voi | 🐋: 750 đô" +
-						"\n8/ Cá heo | 🐬: 750 đô" +
-						"\n9/ Mực | 🦑: 1000 đô" +
-						"\n10/ Cá mập | 🦈: 1000 đô",
-						threadID, messageID
-					);
-			})();
-		
+					await Fishing.updateStealFishingTime(senderID, Date.now());
+				});
+			}
+			else if (content.indexOf('shop') == 0) return api.sendMessage(getText('fishingShop'), threadID, (err, info) => __GLOBAL.reply.push({ type: "fishing_shop", messageID: info.messageID, target: parseInt(threadID), author: senderID }));
+		}
+
 
 		/* ==================== System Check ==================== */
 
@@ -1801,7 +2068,25 @@ module.exports = function({ api, modules, config, __GLOBAL, User, Thread, Rank, 
 				checkCmd = stringSimilarity.findBestMatch(contentMessage.slice(prefix.length, findSpace), nocmdData.cmds);
 				if (checkCmd.bestMatch.target == contentMessage.slice(prefix.length, findSpace)) return;
 			}
-			if (checkCmd.bestMatch.rating >= 0.3) return api.sendMessage(`Lệnh bạn nhập không tồn tại.\nÝ bạn là lệnh "${prefix + checkCmd.bestMatch.target}" phải không?`, threadID, messageID);
+			if (checkCmd.bestMatch.rating >= 0.3) return api.sendMessage(getText('cmdNotFound', `${prefix + checkCmd.bestMatch.target}`), threadID, messageID);
+		}
+
+		//Level up notification
+		if (contentMessage && !__GLOBAL.blockLevelUp.includes(threadID)) {
+			let point = await Rank.getPoint(senderID);
+			var curLevel = Math.floor((Math.sqrt(1 + (4 * point) / 3) + 1) / 2);
+			var level = Math.floor((Math.sqrt(1 + (4 * (point + 1)) / 3) + 1) / 2);
+			if (level > curLevel) {
+				let name = await User.getName(senderID);
+				return api.sendMessage({
+					body: name + getText('keyboardHero', level),
+					attachment: fs.createReadStream(__dirname + "/src/levelup.GIF"),
+					mentions: [{
+						tag: name,
+						id: senderID,
+					}],
+				}, threadID)
+			}
 		}
 	}
 }

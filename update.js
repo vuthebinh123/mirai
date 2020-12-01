@@ -1,4 +1,4 @@
-var fs, git, cmd, exec;
+var fs, git, cmd, exec, axios;
 var isGlitch = false;
 var isForce = false;
 
@@ -7,16 +7,18 @@ try {
 	git = require('simple-git');
 	cmd = require('node-cmd');
 	exec = require('child_process').exec;
-} catch (err) {
-	if (err) return console.log('[!] Hãy gõ lệnh này vào trước khi chạy update: "npm i fs-extra simple-git node-cmd" [!]');
+	axios = require('axios');
+}
+catch (err) {
+	if (err) return console.log('[!] Hãy gõ lệnh này vào trước khi chạy update: "npm i fs-extra simple-git node-cmd axios" [!]');
 }
 
 var args = process.argv.slice(2);
-if (args.length > 1 || args[0] != '--force') return console.error('Updater chỉ nhận 1 đối số duy nhất là "--force".');
+if (args.length > 1 || args[0] != '--force') return console.error('[!] Updater chỉ nhận 1 tham số duy nhất là "--force" [!]');
 if (args[0] == '--force') isForce = true;
 
 (async () => {
-	if (!fs.existsSync('./.needUpdate') && !isForce) return console.log('[!] Bạn đang sử dụng phiên bản mới nhất! [!]');
+	if (!fs.existsSync('./.updateAvailable') && !isForce) return console.log('[!] Bạn đang sử dụng phiên bản mới nhất [!]');
 	else if (isForce) console.log('[!] Đã bật bắt buộc cập nhật [!]');
 	cmd.run('pm2 stop 0');
 	if (process.env.API_SERVER_EXTERNAL == 'https://api.glitch.com') isGlitch = true;
@@ -45,13 +47,15 @@ async function backup() {
 
 async function clean() {
 	console.log('-> Đang xóa bản cũ');
-	fs.readdirSync('.').forEach(item => (item != 'tmp') ? fs.removeSync(item) : '');
+	fs.readdirSync('.').forEach(item => {
+		if (item != 'tmp') fs.removeSync(item);
+	});
 }
 
 function clone() {
 	console.log('-> Đang tải bản cập nhật mới');
-	return new Promise(function(resolve, reject) {
-		git().clone('https://github.com/roxtigger2003/mirai', './tmp/newVersion', [], result => {
+	return new Promise(function (resolve, reject) {
+		git().clone('https://github.com/catalizcs/mirai', './tmp/newVersion', [], result => {
 			if (result != null) reject('[!] Không thể tải xuống bản cập nhật [!]');
 			resolve();
 		})
@@ -62,20 +66,19 @@ async function install() {
 	console.log('-> Đang cài đặt bản cập nhật mới');
 	fs.copySync('./tmp/newVersion', './');
 	if (fs.existsSync('./tmp/appstate.json')) fs.copySync('./tmp/appstate.json', './appstate.json');
-	if (fs.existsSync('./tmp/.env.old')) fs.copySync('./tmp/.env.old', './.env');
 }
 
 function modules() {
-	return new Promise(function(resolve, reject) {
+	return new Promise(function (resolve, reject) {
 		if (!isGlitch) {
 			console.log('-> Đang cài đặt modules');
 			let child = exec('npm install');
 			child.stdout.on('end', resolve);
 			child.stderr.on('data', data => {
 				if (data.toLowerCase().includes('error')) {
-					console.error('[!] Đã có lỗi xảy ra. Vui lòng chụp lại lỗi và đăng vào mục Issue trên Github [!]');
+					console.error('[!] Đã có lỗi xảy ra. Vui lòng tạo bài đăng và gửi file updateErr.log ở mục Issue trên Github [!]');
 					data = data.replace(/\r?\n|\r/g, '');
-					console.error('Lỗi: ' + data);
+					fs.writeFileSync('updateErr.log', data);
 					reject();
 				}
 			});
@@ -88,9 +91,18 @@ function modules() {
 }
 
 async function finish() {
+	let checkDB = (await axios.get('https://raw.githubusercontent.com/catalizcs/mirai/master/package.json')).data.newDB;
+	if (checkDB) console.log('>> Database cần phải thay đổi, bạn sẽ không thể sử dụng được database cũ <<');
+	else {
+		console.log('>> Database không cần phải thay đổi, bạn có thể tiếp tục sử dụng database cũ <<');
+		if (fs.existsSync('./tmp/config')) fs.copySync('./tmp/config', './config');
+	}
 	console.log('-> Đang hoàn tất');
-	fs.removeSync('./tmp/newVersion');
-	console.log('>> Cập nhật hoàn tất! Tất cả những dữ liệu quan trọng đã được sao lưu trong thư mục "tmp" <<');
+	if (fs.existsSync('./.env.example')) fs.copySync('./.env.example', './.env');
+	if (fs.existsSync('./tmp/newVersion')) fs.removeSync('./tmp/newVersion');
+	if (fs.existsSync('./tmp/handle/custom_message.js')) fs.copySync('./tmp/handle/custom_message.js', './app/handle/custom_message.js');
+	console.log('>> Cập nhật hoàn tất <<');
+	console.log('>> TẤT CẢ NHỮNG DỮ LIỆU QUAN TRỌNG ĐÃ ĐƯỢC SAO LƯU VÀO THƯ MỤC "tmp" <<');
 	if (!isGlitch) console.log('[!] Vì bạn đang không chạy bot trên Glitch, bạn sẽ cần phải tự khởi động bot [!]');
 	else cmd.run('refresh');
 }

@@ -1,155 +1,97 @@
 const logger = require("../modules/log.js");
-module.exports = function({ models, api }) {
-	const Economy = models.use("economy");
-	
-/* ==================== Daily ==================== */
+module.exports = function ({ models }) {
+	const Economy = models.use("user");
 
-	function getDailyTime(uid) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(economy) {
-			if (!economy) return;
-			return economy.get({ plain: true }).dailytime;
-		});
+	/* ==================== Daily ==================== */
+
+	async function getDailyTime(uid) {
+		return (await Economy.findOne({ where: { uid } })).get({ plain: true }).dailytime;
 	}
 
-	function updateDailyTime(uid, dailytime) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(economy) {
-			if (!economy) return;
-			return economy.update({ dailytime });
-		}).then(function() {
+	async function updateDailyTime(uid, dailytime) {
+		try {
+			(await Economy.findOne({ where: { uid } })).update({ dailytime });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
 	/* ==================== Work ==================== */
 
-	function getWorkTime(uid) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(economy) {
-			if (!economy) return;
-			return economy.get({ plain: true }).worktime;
-		});
+	async function getWorkTime(uid) {
+		return (await Economy.findOne({ where: { uid } })).get({ plain: true }).worktime;
 	}
 
-	function updateWorkTime(uid, worktime) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(economy) {
-			if (!economy) return;
-			return economy.update({ worktime });
-		}).then(function() {
+	async function updateWorkTime(uid, worktime) {
+		try {
+			(await Economy.findOne({ where: { uid } })).update({ worktime });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
 	/* ==================== Money ==================== */
 
-	function getMoney(uid) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(economy) {
-			if (!economy) return;
-			return economy.get({ plain: true }).money;
-		});
+	async function getMoney(uid) {
+		return (await Economy.findOne({ where: { uid } })).get({ plain: true }).money;
 	}
 
-	function addMoney(uid, moneyIncrement) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(economy) {
-			if (!economy) return;
-			var moneyData = economy.get({ plain: true }).money;
-			return economy.update({ money: moneyData + moneyIncrement });
-		}).then(function() {
+	async function addMoney(uid, moneyIncrement) {
+		try {
+			let money = (await getMoney(uid)) + moneyIncrement;
+			(await Economy.findOne({ where: { uid } })).update({ money });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
-	function subtractMoney(uid, moneyDecrement) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(economy) {
-			if (!economy) return;
-			var moneyData = economy.get({ plain: true }).money;
-			return economy.update({ money: moneyData - moneyDecrement });
-		}).then(function() {
+	async function subtractMoney(uid, moneyDecrement) {
+		try {
+			let money = (await getMoney(uid)) - moneyDecrement;
+			(await Economy.findOne({ where: { uid } })).update({ money });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
-	function setMoney(uid, money) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(economy) {
-			if (!economy) return;
-			return economy.update({ money });
-		}).then(function() {
+	async function setMoney(uid, money) {
+		try {
+			(await Economy.findOne({ where: { uid } })).update({ money });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
-	}	
-
-/* =================== Steal ==================== */
-
-	function getStealTime(uid) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.get({ plain: true }).stealtime;
-		});
+		}
 	}
 
-	function updateStealTime(uid, stealtime) {
-		return Economy.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.update({ stealtime });
-		}).then(function() {
+	/* =================== Steal ==================== */
+
+	async function getStealTime(uid) {
+		return (await Economy.findOne({ where: { uid } })).get({ plain: true }).stealtime;
+	}
+
+	async function updateStealTime(uid, stealtime) {
+		try {
+			(await Economy.findOne({ where: { uid } })).update({ stealtime });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
 	return {

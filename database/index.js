@@ -1,6 +1,6 @@
 require('dotenv').config();
 const Sequelize = require("sequelize");
-const {database} = require("../config");
+const { database } = require("../config");
 const dialect = process.env.DIALECT || 'sqlite';
 module.exports = {
 	sequelize: new Sequelize({
@@ -17,7 +17,7 @@ module.exports = {
 				/SQLITE_BUSY/,
 			],
 			name: 'query',
-			max: 5
+			max: 10
 		},
 		logging: process.env.NODE_ENV == 'development' ? console.log : false,
 		transactionType: 'IMMEDIATE',
@@ -30,7 +30,9 @@ module.exports = {
 			},
 			timestamps: true
 		},
-		sync: { force: process.env.NODE_ENV == 'build' },
+		sync: {
+			force: process.env.NODE_ENV == 'build'
+		},
 	}),
 	Sequelize,
 	Op: Sequelize.Op

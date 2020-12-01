@@ -1,141 +1,146 @@
 const logger = require("../modules/log.js");
-module.exports = function({ models, api }) {
+module.exports = function ({ models, api, __GLOBAL }) {
 	const Thread = models.use('thread');
 
-	function createThread(threadID) {
-		api.getThreadInfo(threadID, (err, info) => {
-			if (err) return logger(err, 2);
-			var name = info.name;
-			Thread.findOrCreate({ where: { threadID }, defaults: { name } }).then(([thread, created]) => {
-				if (created) return logger(threadID, 'New Thread');
-			}).catch((error) => {
-				logger(error, 2);
-			})
-		})
+	function getText(...args) {
+		const langText = __GLOBAL.language.thread;
+		const getKey = args[0];
+		if (!langText.hasOwnProperty(getKey)) throw `${__filename} - Not found key language: ${getKey}`;
+		let text = langText[getKey].replace(/\\n/gi, '\n');
+		for (let i = args.length; i > 0; i--) {
+			let regEx = RegExp(`%${i}`, 'g');
+			text = text.replace(regEx, args[i]);
+		}
+		return text;
 	}
 
-	function setThread(threadID, options = {}) {
-		return Thread.findOne({
-			where: {
-				threadID
-			}
-		}).then(function(thread) {
-			if (!thread) return;
-			return thread.update(options);
-		}).then(function() {
+	async function createThread(threadID) {
+		if (!await Thread.findOne({ where: { threadID } })) {
+			let threadInfo = await getInfo(threadID);
+			let name = threadInfo.name;
+			let [thread, created] = await Thread.findOrCreate({ where: { threadID }, defaults: { name } });
+			if (created) return logger(threadID, getText('newThread'));
+		}
+		else return;
+	}
+
+	async function getInfo(threadID) {
+		return await api.getThreadInfo(threadID);
+	}
+
+	async function setThread(threadID, options = {}) {
+		try {
+			(await Thread.findOne({ where: { threadID } })).update(options);
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
-	function delThread(threadID) {
-		return Thread.findOne({
-			where: {
-				threadID
-			}
-		}).then(thread => thread.destroy());
+	async function delThread(threadID) {
+		return (await Thread.findOne({ where: { threadID } })).destroy();
 	}
 
-	function getThreads(where = {}) {
-		return Thread.findAll({ where }).then(e => e.map(e => e.get({ plain: true }))).catch((error) => {
-			logger(error, 2);
+	async function getThreads(...data) {
+		var where, attributes;
+		for (let i of data) {
+			if (typeof i != 'object') throw getText('needAorO');
+			if (Array.isArray(i)) attributes = i;
+			else where = i;
+		}
+		try {
+			return (await Thread.findAll({ where, attributes })).map(e => e.get({ plain: true }));
+		}
+		catch (err) {
+			logger(err, 2);
 			return [];
-		})
+		}
 	}
 
-	function getName(threadID) {
-		return Thread.findOne({
-			where: {
-				threadID
-			}
-		}).then(function(thread) {
-			if (!thread) return;
-			return thread.get({ plain: true }).name;
-		});
+	async function getName(threadID) {
+		return (await Thread.findOne({ where: { threadID } })).get({ plain: true }).name;
 	}
 
-	function updateName(threadID, name) {
-		return Thread.findOne({
-			where: {
-				threadID
-			}
-		}).then(function(thread) {
-			if (!thread) return;
-			return thread.update({ name });
-		});
+	async function updateName(threadID, name) {
+		return (await Thread.findOne({ where: { threadID } })).update({ name });
 	}
 
-	function unban(threadID, block = false) {
-		return Thread.findOne({
-			where: {
-				threadID
-			}
-		}).then(function(thread) {
-			if (!thread) return;
-			return thread.update({ block });
-		}).then(function () {
+	async function unban(threadID, block = false) {
+		try {
+			await createThread(threadID);
+			(await Thread.findOne({ where: { threadID } })).update({ block });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		})
+		}
 	}
 
-	function ban(threadID) {
-		return unban(threadID, true);
+	async function ban(threadID) {
+		return await unban(threadID, true);
 	}
 
-	function blockResend(threadID, blockResend = true) {
-		return Thread.findOne({
-			where: {
-				threadID
-			}
-		}).then(function(thread) {
-			if (!thread) return;
-			return thread.update({ blockResend });
-		}).then(function () {
+	async function blockLevelUp(threadID, blocklevelup = true) {
+		try {
+			await createThread(threadID);
+			(await Thread.findOne({ where: { threadID } })).update({ blocklevelup });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		})
+		}
 	}
 
-	function unblockResend(threadID) {
-		return blockResend(threadID, false);
+	async function unblockLevelUp(threadID) {
+		return await blockLevelUp(threadID, false);
 	}
 
-	function blockNSFW(threadID, blockNSFW = true) {
-		return Thread.findOne({
-			where: {
-				threadID
-			}
-		}).then(function(thread) {
-			if (!thread) return;
-			return thread.update({ blockNSFW });
-		}).then(function() {
+	async function blockResend(threadID, blockResend = true) {
+		try {
+			(await Thread.findOne({ where: { threadID } })).update({ blockResend });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		})
+		}
 	}
 
-	function unblockNSFW(threadID) {
-		return blockNSFW(threadID, false);
+	async function unblockResend(threadID) {
+		return await blockResend(threadID, false);
+	}
+
+	async function blockNSFW(threadID, blockNSFW = true) {
+		try {
+			(await Thread.findOne({ where: { threadID } })).update({ blockNSFW });
+			return true;
+		}
+		catch (err) {
+			logger(err, 2);
+			return false;
+		}
+	}
+
+	async function unblockNSFW(threadID) {
+		return await blockNSFW(threadID, false);
 	}
 
 	return {
-		getThreads,
 		createThread,
+		getInfo,
 		setThread,
 		delThread,
 		getName,
+		getThreads,
 		updateName,
 		ban,
 		unban,
+		blockLevelUp,
+		unblockLevelUp,
 		blockResend,
 		unblockResend,
 		blockNSFW,

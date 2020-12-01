@@ -1,177 +1,129 @@
 const logger = require("../modules/log.js");
-module.exports = function({ models, api }) {
+module.exports = function ({ models, api, __GLOBAL }) {
 	const User = models.use('user');
 
-	function createUser(id) {
-		getName(id).then((nameUser) => {
-			if (nameUser) return;
-			api.getUserInfo(id, (err, result) => {
-				if (err) return logger(err, 2);
-				const Economy = models.use('economy');
-				const Fishing = models.use('fishing');
-				const Nsfw = models.use('nsfw');
-				var name = result[id].name;
-				var inventory = {"fish1": 0,"fish2": 0,"trash": 0,"crabs": 0,"crocodiles": 0,"whales": 0,"dolphins": 0,"blowfish": 0,"squid": 0,"sharks": 0};
-				var stats = {"casts": 0,"fish1": 0,"fish2": 0,"trash": 0,"crabs": 0,"crocodiles": 0,"whales": 0,"dolphins": 0,"blowfish": 0,"squid": 0,"sharks": 0};
-				Economy.findOrCreate({ where: {uid: id} });
-				Fishing.findOrCreate({ where: {uid: id}, defaults: { inventory: JSON.stringify(inventory), stats: JSON.stringify(stats) } });
-				Nsfw.findOrCreate({ where: {uid: id} });
-				User.findOrCreate({ where: { uid: id }, defaults: { name, reasonafk: "" } }).then(([user, created]) => {
-					if (created) logger(id, 'New User');
-				}).catch((error) => logger(error, 2))
-			})
-		});
+	function getText(...args) {
+		const langText = __GLOBAL.language.user;
+		const getKey = args[0];
+		if (!langText.hasOwnProperty(getKey)) throw `${__filename} - Not found key language: ${getKey}`;
+		let text = langText[getKey].replace(/\\n/gi, '\n');
+		for (let i = args.length; i > 0; i--) {
+			let regEx = RegExp(`%${i}`, 'g');
+			text = text.replace(regEx, args[i]);
+		}
+		return text;
 	}
 
-	function setUser(uid, options = {}) {
-		return User.findOne({
-			where: {
-				uid
+	async function createUser(uid) {
+		if (!await User.findOne({ where: { uid } })) {
+			let name = (await getInfo(uid)).name;
+			var inventory = { "fish1": 0, "fish2": 0, "trashes": 0, "crabs": 0, "crocodiles": 0, "whales": 0, "dolphins": 0, "blowfishes": 0, "squids": 0, "sharks": 0, "exp": 0, "rod": 0, "durability": 0 };
+			var stats = { "casts": 0, ...inventory };
+			var [user, created] = await User.findOrCreate({ where: { uid }, defaults: { name, inventory, stats, reasonafk: '' } });
+			if (created) {
+				logger(`${name} - ${uid}`, getText('newUser'));
+				return true;
 			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.update(options);
-		}).then(function() {
+			else return false;
+		}
+		else return;
+	}
+
+	async function getInfo(id) {
+		return (await api.getUserInfo(id))[id];
+	}
+
+	async function setUser(uid, options = {}) {
+		try {
+			(await User.findOne({ where: { uid } })).update(options);
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
-	function delUser(uid) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(user => user.destroy());
+	async function delUser(uid) {
+		return (await User.findOne({ where: { uid } })).destroy();
 	}
 
-	function getUsers(where = {}) {
-		return User.findAll({ where }).then(e => e.map(e => e.get({ plain: true }))).catch((error) => {
-			logger(error, 2);
+	async function getUsers(...data) {
+		var where, attributes;
+		for (let i of data) {
+			if (typeof i != 'object') throw getText('needAorO');
+			if (Array.isArray(i)) attributes = i;
+			else where = i;
+		}
+		try {
+			return (await User.findAll({ where, attributes })).map(e => e.get({ plain: true }));
+		}
+		catch (err) {
+			logger(err, 2);
 			return [];
-		})
+		}
 	}
 
-	function findUser(uid) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return false;
-		});
+	async function getName(uid) {
+		return (await User.findOne({ where: { uid } })).get({ plain: true }).name;
 	}
 
-	function getColumn(attr = []) {
-		return User.findAll({ attributes: attr }).then(function(res) {
-			let points = [];
-			res.forEach(item => points.push(item.get({ plain: true })));
-			return points;
-		}).catch(err => {
-			return [];
-		});
+	async function getGender(uid) {
+		return (await getInfo(uid)).gender;
 	}
 
-	function getName(uid) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.get({ plain: true }).name;
-		});
-	}
-
-	function getGender(uid) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(async function(user) {
-			if (!user) return;
-			let userInfo = await api.getUserInfo(uid);
-			let gender = userInfo[uid].gender;
-			return gender.toString();
-		});
-	}
-
-	function unban(uid, block = false) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.update({ block });
-		}).then(function() {
+	async function unban(uid, block = false) {
+		try {
+			await createUser(uid);
+			(await User.findOne({ where: { uid } })).update({ block });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		})
+		}
 	}
 
-	function ban(uid) {
-		return unban(uid, true);
+	async function ban(uid) {
+		return await unban(uid, true);
 	}
 
-	function nonafk(uid, mode = false) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.update({ afk: mode });
-		}).then(function() {
+	async function nonafk(uid, afk = false) {
+		try {
+			(await User.findOne({ where: { uid } })).update({ afk });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		})
+		}
 	}
 
-	function afk(uid) {
-		return nonafk(uid, true);
+	async function afk(uid) {
+		return await nonafk(uid, true);
 	}
 
-	function getReason(uid) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.get({ plain: true }).reasonafk;
-		});
+	async function getReason(uid) {
+		return (await User.findOne({ where: { uid } })).get({ plain: true }).reasonafk;
 	}
 
-	function updateReason(uid, reason) {
-		return User.findOne({
-			where: {
-				uid
-			}
-		}).then(function(user) {
-			if (!user) return;
-			return user.update({ reasonafk: reason });
-		}).then(function() {
+	async function updateReason(uid, reasonafk) {
+		try {
+			(await User.findOne({ where: { uid } })).update({ reasonafk });
 			return true;
-		}).catch(function(error) {
-			logger(error, 2);
+		}
+		catch (err) {
+			logger(err, 2);
 			return false;
-		});
+		}
 	}
 
 	return {
 		createUser,
+		getInfo,
 		setUser,
 		delUser,
 		getUsers,
-		getColumn,
-		findUser,
 		getName,
 		getGender,
 		unban,
