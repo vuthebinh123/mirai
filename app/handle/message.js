@@ -92,7 +92,7 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread, Rank, Economy,
 		}
 
 		//sim on/off
-		if (__GLOBAL.simOn.includes(threadID) && senderID != api.getCurrentUserID()) request(`http://195.201.173.201:26880/sim/${encodeURIComponent(contentMessage)}`, (err, response, body) => api.sendMessage((JSON.parse(body).out != '') ? JSON.parse(body).out : getText('noAnswer'), threadID, messageID));
+		if (__GLOBAL.simOn.includes(threadID) && senderID != api.getCurrentUserID()) request(`http://95.217.72.187:26900/sim/${encodeURIComponent(contentMessage)}`, (err, response, body) => api.sendMessage((JSON.parse(body).out != '') ? JSON.parse(body).out : getText('noAnswer'), threadID, messageID));
 
 		//Get cmds.json
 		var nocmdData = JSON.parse(fs.readFileSync(__dirname + "/src/cmds.json"));
