@@ -31,6 +31,8 @@ Project Mirai sẽ biến tài khoản Facebook cá nhân của bạn thành m�
 
 - 4.7.0: Thay đổi rất nhiều, đã thêm tùy chọn ngôn ngữ (xem .env).
 
+- 4.7.1: Sửa lỗi "Wrong username/password".
+
 </details>
 
 # Installation
