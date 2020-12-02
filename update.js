@@ -14,7 +14,7 @@ catch (err) {
 }
 
 var args = process.argv.slice(2);
-if (args.length > 1 || args[0] != '--force') return console.error('[!] Updater chỉ nhận 1 tham số duy nhất là "--force" [!]');
+if (args.length > 1 && args[0] != '--force') return console.error('[!] Updater chỉ nhận 1 tham số duy nhất là "--force" [!]');
 if (args[0] == '--force') isForce = true;
 
 (async () => {
