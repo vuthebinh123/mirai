@@ -1,4 +1,4 @@
-module.exports = function (api) {
+module.exports = function ({ api }) {
 	const options = {
 		forceLogin: true,
 		listenEvents: true,
