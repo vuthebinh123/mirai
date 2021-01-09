@@ -92,7 +92,7 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread, Rank, Economy,
 		}
 
 		//sim on/off
-		if (__GLOBAL.simOn.includes(threadID) && senderID != api.getCurrentUserID()) request(`http://api.simsimi.tk/sim/${encodeURIComponent(contentMessage)}`, (err, response, body) => api.sendMessage((JSON.parse(body).out != 'Em không hiểu gì hết trơn á') ? JSON.parse(body).out : getText('noAnswer'), threadID, messageID));
+		if (__GLOBAL.simOn.includes(threadID) && senderID != api.getCurrentUserID()) axios.get(`http://api.simsimi.tk/sim/${encodeURIComponent(contentMessage)}`,  {headers: { "User-Agent": "Project Mirai"}}).then(body => api.sendMessage((body.data.out != 'Em không hiểu gì hết trơn á') ? body.data.out : getText('noAnswer'), threadID, messageID));
 
 		//Get cmds.json
 		var nocmdData = JSON.parse(fs.readFileSync(__dirname + "/src/cmds.json"));
@@ -941,7 +941,7 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread, Rank, Economy,
 		}
 
 		//simsimi
-		if (contentMessage.indexOf(`${prefix}sim`) == 0) return request(`http://api.simsimi.tk/sim/${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}`, (err, response, body) => api.sendMessage((JSON.parse(body).out != 'Em không hiểu gì hết trơn á') ? JSON.parse(body).out : getText('noAnswer'), threadID, messageID));
+		if (contentMessage.indexOf(`${prefix}sim`) == 0) return axios.get(`http://api.simsimi.tk/sim/${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}`,  {headers: { "User-Agent": "Project Mirai"}}).then(body => api.sendMessage((body.data.out != 'Em không hiểu gì hết trơn á') ? body.data.out : getText('noAnswer'), threadID, messageID));
 
 		//mit
 		if (contentMessage.indexOf(`${prefix}mit`) == 0) return request(`https://kakko.pandorabots.com/pandora/talk-xml?input=${encodeURIComponent(contentMessage.slice(prefix.length + 4, contentMessage.length))}&botid=9fa364f2fe345a10&custid=${senderID}`, (err, response, body) => api.sendMessage((/<that>(.*?)<\/that>/.exec(body)[1]), threadID, messageID));
