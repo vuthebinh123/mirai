@@ -13,7 +13,7 @@ var rl = readline.createInterface({
 const option = {
 	logLevel: "silent",
 	forceLogin: true,
-	userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36"
+	userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36"
 };
 
 //Hãy điền tài khoản và mật khẩu vào file .env sau khi đã đổi .env.example thành .env

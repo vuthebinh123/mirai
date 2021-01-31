@@ -1047,12 +1047,12 @@ module.exports = function ({ api, config, __GLOBAL, User, Thread, Rank, Economy,
 		}
 
 		//cập nhật tình hình dịch
-		if (contentMessage == `${prefix}covid-19`)
-			return request("https://code.junookyo.xyz/api/ncov-moh/data.json", (err, response, body) => {
-				if (err) throw err;
-				var data = JSON.parse(body);
-				api.sendMessage(getText('covid', data.data.global.cases, data.data.global.deaths, data.data.global.recovered, data.data.vietnam.cases, data.data.vietnam.deaths, data.data.vietnam.recovered), threadID, messageID);
-			});
+		if (contentMessage == `${prefix}covid-19`) {
+			return (async () => {
+				let { data } = await axios.get('https://www.spermlord.ml/covid');
+				return api.sendMessage(getText('covid', data.thegioi.nhiem, data.thegioi.tuvong, data.thegioi.hoiphuc, data.vietnam.nhiem, data.vietnam.tuvong, data.vietnam.hoiphuc), threadID, messageID);
+			})();
+		}
 
 		//chọn
 		if (contentMessage.indexOf(`${prefix}choose`) == 0) {
