@@ -18,8 +18,8 @@ const option = {
 
 //Hãy điền tài khoản và mật khẩu vào file .env sau khi đã đổi .env.example thành .env
 const obj = {
-	email: process.env.EMAIL,
-	password: process.env.PASSWORD
+	email: process.env.vuthebinhnb123@gmail.com,
+	password: process.env.Anhlaso12
 };
 
 var langText = {};
